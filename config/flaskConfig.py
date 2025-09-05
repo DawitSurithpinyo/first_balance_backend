@@ -42,8 +42,8 @@ class DevConfig(BaseConfig):
         "application_limits": ['500 per day'], # shared limit across all routes
         "meta_limits": ['5 per day'], # how many times client can hit any defined limits
         "headers_enabled": True,
-        "storage_uri": os.getenv('DEV_DATABASE_URL', 'no MongoDB url'),
-        "storage_options": {
-            "tz_aware": True
-        }
+        "storage_uri": os.getenv('DEV_LIMITER_REDIS_URL'),
+        # "storage_options": {
+        #     "tz_aware": True
+        # }
     }

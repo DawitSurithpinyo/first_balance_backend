@@ -1,0 +1,5 @@
+exclude_dirs:
+  - .venv
+  - requirements.txt
+  - app.py
+  - __init__.py

@@ -21,10 +21,11 @@ class DevConfig(BaseConfig):
     SESSION_COOKIE_NAME = "First_balance"
     SESSION_COOKIE_SECURE = False
 
+
     # Below are other custom configs that are not for the Flask app
     PORT = 5000 # for app.run()
     CORS_CONFIGS = {
-        "origins": ['http://localhost:8081', 'http://localhost:5000'],
+        "origins": ['http://localhost:5173', 'http://localhost:5000'],
         "supports_credentials": True,
         "expose_headers": ["X-CSRF-Token"], # custom headers must be exposed so that front-end can receive them
         "allow_headers": ["X-CSRF-Token"]

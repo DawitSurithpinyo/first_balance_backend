@@ -54,7 +54,7 @@ class authController(FlaskView):
             }), 201
         
         except Exception as e:
-            print(f"Error on authController.googleLogin: ")
+            print("Error on authController.googleLogin: ")
             traceback.print_exc()
             if isinstance(e, AppError):
                 return jsonify({
@@ -114,7 +114,7 @@ class authController(FlaskView):
                                 authResponses.getCredentials.ERROR_RATE_LIMIT_EXCEEDED, 429)
             
         except Exception as e:
-            print(f"Error on authController.getCredentials: ")
+            print("Error on authController.getCredentials: ")
             traceback.print_exc()
             if isinstance(e, AppError):
                 return jsonify({

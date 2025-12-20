@@ -20,7 +20,7 @@ from src.usecases.authUsecase import authUsecase
 from src.usecases.transactionUsecase import transactionUsecase
 
 
-def createApp(config) -> Flask:
+def createApp(config: DevConfig | ProdConfig) -> Flask:
     """
         Please supply config with any classes from `config/flaskConfig.py`, except `BaseConfig`.
     """
@@ -42,7 +42,7 @@ def createApp(config) -> Flask:
             }), 500
 
 
-def initInfra(config) -> tuple[Redis, MongoClient]:
+def initInfra(config: DevConfig | ProdConfig) -> tuple[Redis, MongoClient]:
     """
         Set up MongoDB and Redis for `Session`. 
 
@@ -66,7 +66,7 @@ def initInfra(config) -> tuple[Redis, MongoClient]:
     return sessionRedis, mongoClient
 
 
-def initAppAddOns(app: Flask, config) -> tuple[PasswordHasher, Limiter]:
+def initAppAddOns(app: Flask, config: DevConfig | ProdConfig) -> tuple[PasswordHasher, Limiter]:
     """
         Add Session, CORS, Argon2 PasswordHasher, and API limiter. Return `passwordHasher` and `Limiter`.
 
@@ -116,13 +116,14 @@ def initMiddlewares(app: Flask) -> None:
 
 
 def initViews(app: Flask, sessionRedis: Redis, mongoClient: MongoClient, 
-              passwordHasher: PasswordHasher, limiter: Limiter) -> None:
+              passwordHasher: PasswordHasher, limiter: Limiter, 
+              conf: DevConfig | ProdConfig) -> None:
     try:
         userRepo = userRepository(mongo=mongoClient, redisSession=sessionRedis)
         transacRepo = transactionRepository(mongo=mongoClient)
 
         authUsecases = authUsecase(userRepo=userRepo, transactionRepo= transacRepo, flaskApp=app, 
-                                   redisSession=sessionRedis, pwHasher=passwordHasher)
+                                   redisSession=sessionRedis, pwHasher=passwordHasher, conf=conf)
         transacUsecases = transactionUsecase(transactionRepo=transacRepo)
         
         URL_PREFIX: str = '/api'

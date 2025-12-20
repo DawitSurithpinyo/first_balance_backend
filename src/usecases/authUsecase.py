@@ -23,6 +23,7 @@ from src.types.user.common import (googleUser, normalUser,
 from src.utils.checkSessionType import checkSessionType
 from src.utils.convertStrToOID import convertStrToObjectID
 from src.utils.sendEmail import sendEmail
+from config.flaskConfig import *
 
 
 class authUsecase():
@@ -31,12 +32,14 @@ class authUsecase():
                  transactionRepo: transactionRepository,
                  flaskApp: Flask,
                  redisSession: Redis,
-                 pwHasher: PasswordHasher):
+                 pwHasher: PasswordHasher,
+                 conf: DevConfig | ProdConfig):
         self.userRepo = userRepo
         self.transactionRepo = transactionRepo
         self.app = flaskApp
         self.redisSession = redisSession
         self.passwordHasher = pwHasher
+        self.config = conf
 
     def googleLogin(self, data: googleLoginRequest) -> googleUser:
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
@@ -233,7 +236,7 @@ class authUsecase():
                 <body>
                     <p>Thank you for signing up to First balance.</p>
                     <p>To be able to log in and fully use your account with this email, please click the account activation link below.</p>
-                    <p><a href="http://localhost:8081/activateAccount?token={token}">http://localhost:8081/activateAccount?token={token}</a></p>
+                    <p><a href="{self.config.FRONT_END_URL}/activateAccount?token={token}">{self.config.FRONT_END_URL}/activateAccount?token={token}</a></p>
                     
                     <p>If you cannot directly click the link, you can copy and paste it onto your browser's search bar as well.</p>
                     <p>For security purposes, <b>the activation link will expire in 6 hours.</b> 
@@ -318,7 +321,7 @@ class authUsecase():
             <head></head>
                 <body>
                     <p>Please click the link below to reset your password.</p>
-                    <p><a href="http://localhost:8081/resetPassword?token={token}">http://localhost:8081/resetPassword?token={token}</a></p>
+                    <p><a href="{self.config.FRONT_END_URL}/resetPassword?token={token}">{self.config.FRONT_END_URL}/resetPassword?token={token}</a></p>
                     
                     <p>If you cannot directly click the link, you can copy and paste it onto your browser's search bar as well.</p>
                     <p>For security purposes, <b>the link will expire in 6 hours.</b> 

@@ -48,10 +48,7 @@ app.config.update(
 
 CORS(app, 
      origins=[
-         "http://localhost:8081",
-         "http://localhost:19000",  # Expo web
-         "http://192.168.1.139:*",
-         "http://192.168.212.237:*"
+         "http://localhost:5173"
      ],
      supports_credentials=True,
      expose_headers=["Set-Cookie"])

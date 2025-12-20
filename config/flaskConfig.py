@@ -24,8 +24,9 @@ class DevConfig(BaseConfig):
 
     # Below are other custom configs that are not for the Flask app
     PORT = 5000 # for app.run()
+    FRONT_END_URL = 'http://localhost:5173'
     CORS_CONFIGS = {
-        "origins": ['http://localhost:5173', 'http://localhost:5000'],
+        "origins": [FRONT_END_URL],
         "supports_credentials": True,
         "expose_headers": ["X-CSRF-Token"], # custom headers must be exposed so that front-end can receive them
         "allow_headers": ["X-CSRF-Token"]
@@ -48,3 +49,8 @@ class DevConfig(BaseConfig):
         #     "tz_aware": True
         # }
     }
+
+
+class ProdConfig(BaseConfig):
+    PORT = 5000
+    FRONT_END_URL = 'https://firstbalance.net:5173'

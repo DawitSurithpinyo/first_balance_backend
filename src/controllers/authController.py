@@ -188,12 +188,11 @@ class authController(FlaskView):
                         raise AppError(f'Invalid request body for api/auth/signUp: {e}',
                                     authResponses.signUp.ERROR_INVALID_REQUEST_BODY, 400)
                     
-                    token: str = self.authUsecase.signUp(data=data)
+                    self.authUsecase.signUp(data=data)
                     return jsonify({
                         "success": True,
-                        "message": "Signed up with the following account activation token and an activation email sent to client.",
+                        "message": "Signed up with an activation email sent to client.",
                         "messageCode": authResponses.signUp.SUCCESS,
-                        "data": token,
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     }), 201
                 

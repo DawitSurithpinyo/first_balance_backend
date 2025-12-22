@@ -53,4 +53,4 @@ class DevConfig(BaseConfig):
 
 class ProdConfig(BaseConfig):
     PORT = 5000
-    FRONT_END_URL = 'https://firstbalance.net:5173'
+    FRONT_END_URL = 'https://firstbalance.net'

@@ -1,9 +1,12 @@
 import os
 
-from dotenv import load_dotenv
 from flask_limiter.util import get_remote_address
 
-load_dotenv()
+class ENV(object):
+    DEV = "DEV"
+    STAGING = "STAGING"
+    PROD = "PROD"
+
 class BaseConfig(object):
     DEBUG = False
     SESSION_COOKIE_HTTPONLY = True
@@ -50,6 +53,9 @@ class DevConfig(BaseConfig):
         # }
     }
 
+class StagingConfig(BaseConfig):
+    PORT = 5000
+    FRONT_END_URL = 'https://firstbalance.net'
 
 class ProdConfig(BaseConfig):
     PORT = 5000

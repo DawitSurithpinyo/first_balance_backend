@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from argon2 import PasswordHasher
 from config.flaskConfig import *
-from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -19,13 +18,34 @@ from src.types.enums.responseCodes.setup import appSetupResponses
 from src.usecases.authUsecase import authUsecase
 from src.usecases.transactionUsecase import transactionUsecase
 
+def getConf() -> DevConfig | StagingConfig | ProdConfig:
+    """
+        Get type of config based on environment variable 'ENV'
+    """
+    try:
+        env = os.getenv("ENV")
+        if env is None:
+            raise ValueError("Missing env variable 'ENV'")
+        if env == ENV.DEV:
+            return DevConfig
+        elif env == ENV.STAGING:
+            return StagingConfig
+        elif env == ENV.PROD:
+            return ProdConfig
+        else:
+            raise ValueError(f"Env variable 'ENV' has an unknown value: {env}")
 
-def createApp(config: DevConfig | ProdConfig) -> Flask:
+    except Exception as e:
+        print("Error while trying to get ENV env variable: ")
+        traceback.print_exc()
+        print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
+
+
+def createApp(config: DevConfig | StagingConfig | ProdConfig) -> Flask:
     """
         Please supply config with any classes from `config/flaskConfig.py`, except `BaseConfig`.
     """
     try:
-        load_dotenv()
         app = Flask(__name__)
         app.config.from_object(config)
         return app
@@ -42,7 +62,7 @@ def createApp(config: DevConfig | ProdConfig) -> Flask:
             }), 500
 
 
-def initInfra(config: DevConfig | ProdConfig) -> tuple[Redis, MongoClient]:
+def initInfra(config: DevConfig | StagingConfig | ProdConfig) -> tuple[Redis, MongoClient]:
     """
         Set up MongoDB and Redis for `Session`. 
 
@@ -66,7 +86,7 @@ def initInfra(config: DevConfig | ProdConfig) -> tuple[Redis, MongoClient]:
     return sessionRedis, mongoClient
 
 
-def initAppAddOns(app: Flask, config: DevConfig | ProdConfig) -> tuple[PasswordHasher, Limiter]:
+def initAppAddOns(app: Flask, config: DevConfig | StagingConfig | ProdConfig) -> tuple[PasswordHasher, Limiter]:
     """
         Add Session, CORS, Argon2 PasswordHasher, and API limiter. Return `passwordHasher` and `Limiter`.
 
@@ -117,7 +137,7 @@ def initMiddlewares(app: Flask) -> None:
 
 def initViews(app: Flask, sessionRedis: Redis, mongoClient: MongoClient, 
               passwordHasher: PasswordHasher, limiter: Limiter, 
-              conf: DevConfig | ProdConfig) -> None:
+              conf: DevConfig | StagingConfig | ProdConfig) -> None:
     try:
         userRepo = userRepository(mongo=mongoClient, redisSession=sessionRedis)
         transacRepo = transactionRepository(mongo=mongoClient)

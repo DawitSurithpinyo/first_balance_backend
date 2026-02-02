@@ -1,0 +1,16 @@
+.DS_Store
+*.pem
+.env*.local
+*.env
+.env.*
+.venv/
+__pycache__
+*.bundle
+others/
+legacy/
+Makefile
+app.py
+.git
+.gitignore
+README.md
+.vscode

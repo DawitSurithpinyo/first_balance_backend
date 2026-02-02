@@ -17,3 +17,5 @@ __pycache__
 
 # local git bundle backup
 *.bundle
+
+others

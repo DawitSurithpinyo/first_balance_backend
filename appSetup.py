@@ -69,11 +69,10 @@ def initInfra(config: DevConfig | StagingConfig | ProdConfig) -> tuple[Redis, Mo
         Please supply config with any classes from `config/flaskConfig.py`, except `BaseConfig`.
     """
     try:
-        if not config.SESSION_REDIS_URL:
-            raise ValueError("SESSION_REDIS_URL must be configured.")
-        sessionRedis = Redis.from_url(config.SESSION_REDIS_URL)
+        sessionRedis = Redis(host=config.REDIS_HOST, username=config.REDIS_USER, password=config.REDIS_PASS, 
+                             port=config.REDIS_PORT, db=0)
 
-        if not config.MONGO_CONFIGS:
+        if not hasattr(config, 'MONGO_CONFIGS'):
             raise ValueError("MONGO_CONFIGS must be configured.")
         mongoClient = MongoClient( **config.MONGO_CONFIGS )
 
@@ -104,7 +103,7 @@ def initAppAddOns(app: Flask, config: DevConfig | StagingConfig | ProdConfig) ->
         else:
             passwordHasher = PasswordHasher()
 
-        limiter = Limiter( app=app, **config.LIMITER_CONFIGS )
+        limiter = Limiter( **config.LIMITER_CONFIGS )
 
         return passwordHasher, limiter
     

@@ -1,4 +1,5 @@
 exclude_dirs:
+  - .github
   - .venv
   - requirements.txt
   - app.py

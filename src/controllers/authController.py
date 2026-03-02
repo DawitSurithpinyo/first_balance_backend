@@ -54,7 +54,7 @@ class authController(FlaskView):
             }), 201
         
         except Exception as e:
-            print(f"Error on authController.googleLogin: ")
+            print("Error on authController.googleLogin: ")
             traceback.print_exc()
             if isinstance(e, AppError):
                 return jsonify({
@@ -114,7 +114,7 @@ class authController(FlaskView):
                                 authResponses.getCredentials.ERROR_RATE_LIMIT_EXCEEDED, 429)
             
         except Exception as e:
-            print(f"Error on authController.getCredentials: ")
+            print("Error on authController.getCredentials: ")
             traceback.print_exc()
             if isinstance(e, AppError):
                 return jsonify({
@@ -188,12 +188,11 @@ class authController(FlaskView):
                         raise AppError(f'Invalid request body for api/auth/signUp: {e}',
                                     authResponses.signUp.ERROR_INVALID_REQUEST_BODY, 400)
                     
-                    token: str = self.authUsecase.signUp(data=data)
+                    self.authUsecase.signUp(data=data)
                     return jsonify({
                         "success": True,
-                        "message": "Signed up with the following account activation token and an activation email sent to client.",
+                        "message": "Signed up with an activation email sent to client.",
                         "messageCode": authResponses.signUp.SUCCESS,
-                        "data": token,
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     }), 201
                 

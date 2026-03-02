@@ -10,10 +10,13 @@
 .env.*
 
 .venv/
-
-# Ignore "others" folder and everything else inside
-backend/others/
 __pycache__
 
 # local git bundle backup
 *.bundle
+
+others/
+legacy/
+
+# MongoDB Atlas admin API service account token
+token.txt

@@ -47,7 +47,7 @@ class serverManager:
                 SESSION_COOKIE_SECURE=False # Must be False when running on HTTP
             )
 
-            CORS(self.app, origins=['http://localhost:8081', 'http://localhost:5000'], 
+            CORS(self.app, origins=['http://localhost:5173', 'http://localhost:5000'], 
                 supports_credentials=True, expose_headers=["Set-Cookie"])
             
             self.mongo = MongoClient(os.getenv('DATABASE_URL', 'no mongoDB url'))

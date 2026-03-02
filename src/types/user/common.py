@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, Field
 from src.types.enums.authChoice import authChoice
 from src.types.error.AppError import AppError
 
@@ -10,11 +10,11 @@ class baseUser(BaseModel, extra='forbid'):
     userID: str
     userEmail: str
     userName: str
-    lastLoginTime: datetime | None = None
+    lastLoginTime: datetime | None = Field(default=None, exclude=True)
     """
         Needs `datetime.now(timezone.utc)`
     """
-    activatedTime: datetime | None = None
+    activatedTime: datetime | None = Field(default=None, exclude=True)
     """
         Needs `datetime.now(timezone.utc)`
     """
@@ -35,10 +35,10 @@ class baseUser(BaseModel, extra='forbid'):
 
 class normalUser(baseUser, extra='forbid'):
     """
-        For returning user data to client
+        For user that manually sign up.
     """
     signUpChoice: authChoice = authChoice.MANUAL
-    createdTime: datetime | None = None
+    createdTime: datetime | None = Field(default=None, exclude=True)
     """
         Needs `datetime.now(timezone.utc)`. 
         Cannot convert to isoformat `str` because we need this field as the index for `expireAfterSeconds`, which requires timezone-aware `<class 'datetime.datetime'>` object.
@@ -51,12 +51,13 @@ class normalUser(baseUser, extra='forbid'):
         
             - Put simply, after the user activate their account, we just want the user document to live forever.
     """
-    activationToken: str | None = None
+    activationToken: str | None = Field(default=None, exclude=True)
     """
         Token to activate account. Used together with `createdTime` field.
     """
-    resetPasswordExpireTime: datetime | None = None
-    resetPasswordToken: str | None = None
+    resetPasswordExpireTime: datetime | None = Field(default=None, exclude=True)
+    resetPasswordToken: str | None = Field(default=None, exclude=True)
+    hashedPassword: str = Field(exclude=True)
 
     @field_validator("createdTime", "resetPasswordExpireTime")
     @classmethod
@@ -72,13 +73,6 @@ class normalUser(baseUser, extra='forbid'):
             raise AppError(f'Error while creating normalUser model: expect datetime.now(timezone.utc) for "createdTime" and "resetPasswordExpireTime". Details: {e}', 400)
 
 
-class normalUserWithPassword(normalUser, extra='forbid'):
-    """
-        Internal; only for methods that need to interact with user's password
-    """
-    hashedPassword: str
-
-
 class googleUser(baseUser, extra='forbid'):
     """
         For users who sign up by Google OAuth.
@@ -86,4 +80,17 @@ class googleUser(baseUser, extra='forbid'):
         Also because of security concerns.
     """
     signUpChoice: authChoice = authChoice.GOOGLE
-    userPictureLink: str
+    userPictureLink: str = Field(exclude=True)
+
+
+
+
+class userForClient(BaseModel, extra='forbid'):
+    """
+        All of the above are only for within back end / DB.
+        This one is for returning to client only, regardless of normal/Google user.
+    """
+    userID: str
+    userEmail: str
+    userName: str
+    signUpChoice: authChoice

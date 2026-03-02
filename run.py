@@ -1,8 +1,10 @@
-from appSetup import (createApp, initAppAddOns, initInfra, initMiddlewares,
+from appSetup import (getConf, createApp, initAppAddOns, initInfra, initMiddlewares,
                       initViews)
 from config.flaskConfig import *
+from dotenv import load_dotenv
 
-conf = DevConfig
+load_dotenv()
+conf = getConf()
 
 # Initialize MongoDB and Redis for session before creating app to avoid circular import issues
 sessionRedis, mongoClient = initInfra(conf)
@@ -15,7 +17,7 @@ passwordHasher, limiter = initAppAddOns(app, conf)
 
 # Finally, initialize middleware and routes
 initMiddlewares(app)
-initViews(app, sessionRedis, mongoClient, passwordHasher, limiter)
+initViews(app, sessionRedis, mongoClient, passwordHasher, limiter, conf)
 
 
 if __name__ == "__main__":

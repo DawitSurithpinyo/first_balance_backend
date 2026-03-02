@@ -18,11 +18,11 @@ from src.types.auth.POST import (forgotPasswordRequest, googleLoginRequest,
 from src.types.enums.authChoice import authChoice
 from src.types.enums.responseCodes.auth import authResponses
 from src.types.error.AppError import AppError
-from src.types.user.common import (googleUser, normalUser,
-                                   normalUserWithPassword)
+from src.types.user.common import (googleUser, normalUser)
 from src.utils.checkSessionType import checkSessionType
 from src.utils.convertStrToOID import convertStrToObjectID
 from src.utils.sendEmail import sendEmail
+from config.flaskConfig import *
 
 
 class authUsecase():
@@ -31,12 +31,14 @@ class authUsecase():
                  transactionRepo: transactionRepository,
                  flaskApp: Flask,
                  redisSession: Redis,
-                 pwHasher: PasswordHasher):
+                 pwHasher: PasswordHasher,
+                 conf: DevConfig | ProdConfig):
         self.userRepo = userRepo
         self.transactionRepo = transactionRepo
         self.app = flaskApp
         self.redisSession = redisSession
         self.passwordHasher = pwHasher
+        self.config = conf
 
     def googleLogin(self, data: googleLoginRequest) -> googleUser:
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
@@ -75,7 +77,8 @@ class authUsecase():
         user['lastLoginTime'] = datetime.now(timezone.utc)
 
         try:
-            result = self.userRepo.patchUserCredentials(user, filter = {"userEmail": userInfo['email']})
+            result = self.userRepo.patchUserCredentials(user, 
+                        filter = {"userEmail": userInfo['email']})
             result['userID'] = str(result.pop('_id'))
             result = googleUser( **result )
         except ValidationError as e:
@@ -92,14 +95,6 @@ class authUsecase():
             "grantedScopes": flowCreds.granted_scopes
         } ).model_dump(exclude_none=True) )
         current_app.session_interface.regenerate(session) # regenerate session ID
-
-        # # Finally, allow fetching transaction data upon login
-        # with self.app.app_context():
-        #     print(f"session:{session.sid}")
-        #     sessionTTL = self.redisSession.ttl(f"session:{session.sid}")
-        #     print(sessionTTL)
-        #     # Set TTL of cache key to be the same as TTL of session key
-        #     self.cache.set(f"userID:{session['userID']}_need_refetch:", "true", ex=sessionTTL)
 
         return result
 
@@ -132,7 +127,7 @@ class authUsecase():
             id = convertStrToObjectID(field=session['userID'], fieldName='userID', originFuncName='authUsecase.retrieveCredentials')
             result: dict = self.userRepo.getUserCredentials(
                 filter = {"_id": id},
-                projection = {'hashedPassword': False, 'activationToken': False, 
+                projection = {'activationToken': False, 
                               'resetPasswordExpireTime': False, 'resetPasswordToken': False}
             )
             result['userID'] = str(result.pop('_id'))
@@ -163,7 +158,7 @@ class authUsecase():
                                authResponses.signIn.ERROR_INVALID_LOGIN_METHOD, 400)
             
             user['userID'] = str(user.pop('_id'))
-            cred = normalUserWithPassword( **user )
+            cred = normalUser( **user )
         except ValidationError as e:
             raise AppError(f'Error from authUsecase.signIn: Invalid userRepo.getUserCredentials return data. Details: {e}',
                            authResponses.signIn.ERROR_INVALID_GETCREDENTIALS_DATA, 500)
@@ -192,7 +187,6 @@ class authUsecase():
             result = self.userRepo.patchUserCredentials(
                 user = user,
                 filter = {'_id': id},
-                projection = {'hashedPassword': False}
             )
             result['userID'] = str(result.pop('_id'))
             result = normalUser( **result )
@@ -210,10 +204,7 @@ class authUsecase():
 
         return result
         
-    def signUp(self, data: manualSignUpRequest) -> str:
-        """
-            Returns the token for account activation.
-        """
+    def signUp(self, data: manualSignUpRequest) -> None:
         # If account with this email already exists, don't proceed
         exists = self.userRepo.getUserCredentials(
             filter = {"userEmail": data.userEmail},
@@ -233,7 +224,7 @@ class authUsecase():
                 <body>
                     <p>Thank you for signing up to First balance.</p>
                     <p>To be able to log in and fully use your account with this email, please click the account activation link below.</p>
-                    <p><a href="http://localhost:8081/activateAccount?token={token}">http://localhost:8081/activateAccount?token={token}</a></p>
+                    <p><a href="{self.config.FRONT_END_URL}/activateAccount?token={token}">{self.config.FRONT_END_URL}/activateAccount?token={token}</a></p>
                     
                     <p>If you cannot directly click the link, you can copy and paste it onto your browser's search bar as well.</p>
                     <p>For security purposes, <b>the activation link will expire in 6 hours.</b> 
@@ -245,9 +236,8 @@ class authUsecase():
 
         sendEmail(subject=subject, body=body, sender=sender, recipients=recipient, requiresHTML=True)
         
-        # Hash the password, create an activation token, and store in DB
+        # Hash the password and store in DB
         hashcode = self.passwordHasher.hash(data.password)
-        token = secrets.token_urlsafe(128)
         result = self.userRepo.patchUserCredentials(
             user = {
                 'userEmail': data.userEmail,
@@ -258,7 +248,6 @@ class authUsecase():
                 'activationToken': token
             },
             filter = {'userEmail': data.userEmail},
-            projection = {'hashedPassword': False}
         )
         result['userID'] = str(result.pop('_id'))
 
@@ -268,8 +257,6 @@ class authUsecase():
         except ValidationError as e:
             raise AppError(f'Error from authUsecase.signUp: Invalid userRepo.patchUserCredentials return data. Details: {e}',
                            authResponses.signUp.ERROR_INVALID_PATCH_FROM_DB, 500)
-        
-        return token
         
     def activateAccount(self, token: str) -> normalUser:
         exists = self.userRepo.getUserCredentials(
@@ -288,7 +275,6 @@ class authUsecase():
             result = self.userRepo.patchUserCredentials(
                 user = {'activatedTime': datetime.now(timezone.utc)},
                 filter = {'_id': id}, 
-                projection = {'hashedPassword': False}
             )
             result['userID'] = str(result.pop('_id'))
             result = normalUser( **result )
@@ -318,7 +304,7 @@ class authUsecase():
             <head></head>
                 <body>
                     <p>Please click the link below to reset your password.</p>
-                    <p><a href="http://localhost:8081/resetPassword?token={token}">http://localhost:8081/resetPassword?token={token}</a></p>
+                    <p><a href="{self.config.FRONT_END_URL}/resetPassword?token={token}">{self.config.FRONT_END_URL}/resetPassword?token={token}</a></p>
                     
                     <p>If you cannot directly click the link, you can copy and paste it onto your browser's search bar as well.</p>
                     <p>For security purposes, <b>the link will expire in 6 hours.</b> 
@@ -335,7 +321,6 @@ class authUsecase():
             result = self.userRepo.patchUserCredentials(
                 user = {'resetPasswordToken': token, 'resetPasswordExpireTime': datetime.now(timezone.utc) + timedelta(hours=6)},
                 filter = {'userEmail': data.userEmail},
-                projection = {'hashedPassword': False}
             )
             result['userID'] = str(result.pop('_id'))
             result = normalUser( **result )
@@ -364,12 +349,10 @@ class authUsecase():
         self.userRepo.deleteUserCredentials(
             filter={'_id': exists['_id']},
             fieldsToDelete=['resetPasswordExpireTime', 'resetPasswordToken'],
-            projection={'hashedPassword': False}
         )
         result = self.userRepo.patchUserCredentials(
             user = {'hashedPassword': hashcode},
             filter = {'_id': exists['_id']},
-            projection={'hashedPassword': False}
         )
         result['userID'] = str(result.pop('_id'))
 

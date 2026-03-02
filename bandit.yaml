@@ -1,0 +1,6 @@
+exclude_dirs:
+  - .github
+  - .venv
+  - requirements.txt
+  - app.py
+  - __init__.py

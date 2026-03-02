@@ -1,9 +1,5 @@
-from bson.errors import InvalidId
-from bson.objectid import ObjectId
 from pymongo import MongoClient, ReturnDocument
 from redis import Redis
-from src.types.error.AppError import AppError
-from src.types.user.common import baseUser, googleUser, normalUserWithPassword
 
 
 class userRepository:

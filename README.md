@@ -3,6 +3,8 @@ Contents:
 - [Detailed tech stack](#detailed-tech-stack)
 - [Brief functionalities](#brief-functionalities)
 - [API endpoints](#api-endpoints)
+    - [Auth / user endpoints](#auth--user-endpoints)
+    - [Transaction data endpoints](#transaction-data-endpoints)
 
 ## Detailed tech stack
 - Python with Flask.

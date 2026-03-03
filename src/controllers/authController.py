@@ -263,6 +263,8 @@ class authController(FlaskView):
                         raise AppError(f"Invalid request body for api/auth/requestForgotPassword: {e}",
                                     authResponses.requestForgotPassword.ERROR_INVALID_REQUEST_BODY, 400)
                     
+                    # WHY do I need to return token to the client when an email is sent to them??
+                    # Wtf was I thinking????
                     token: str = self.authUsecase.requestForgotPassword(data=data)
                     return jsonify({
                         "success": True,

@@ -51,7 +51,7 @@ class authController(FlaskView):
                 "messageCode": authResponses.googleLogin.SUCCESS,
                 "data": userCreds.model_dump(exclude_none=True),
                 "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 201
+            }), 200
         
         except Exception as e:
             print("Error on authController.googleLogin: ")

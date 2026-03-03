@@ -216,7 +216,7 @@ One of the three
 
 <u>Endpoint</u>: [API host]/auth/activateAccount?token
 
-<u>Description</u>: Create an account with username and password, and send an email to activate account to the email address provided by the user
+<u>Description</u>: Activate a new account
 
 <u>Rate limited</u>: No
 

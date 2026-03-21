@@ -103,7 +103,7 @@ def initAppAddOns(app: Flask, config: DevConfig | StagingConfig | ProdConfig) ->
         else:
             passwordHasher = PasswordHasher()
 
-        limiter = Limiter( **config.LIMITER_CONFIGS )
+        limiter = Limiter( app=app, **config.LIMITER_CONFIGS )
 
         return passwordHasher, limiter
     

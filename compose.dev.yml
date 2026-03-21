@@ -2,14 +2,15 @@ services:
   redis:
     image: redis:alpine3.22
     container_name: fb_redis
-    environment:
-      REDIS_DEV_USER: Punn
-      REDIS_DEV_PASSWORD: mongodb
-      REDIS_DEV_HOST: localhost
+    command: redis-server /usr/local/etc/redis/redis.conf
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/var/lib/redis/data
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
+      # <left>:<right> => <left> is actual path to resource in host computer, and must be accessible by Docker
+      # <right> is where the resource appear inside the container
+      # The command above read from inside the container, so it must be the <right> directory
     restart: unless-stopped
 
 volumes:

@@ -69,8 +69,7 @@ def initInfra(config: DevConfig | StagingConfig | ProdConfig) -> tuple[Redis, Mo
         Please supply config with any classes from `config/flaskConfig.py`, except `BaseConfig`.
     """
     try:
-        sessionRedis = Redis(host=config.REDIS_HOST, username=config.REDIS_USER, password=config.REDIS_PASS, 
-                             port=config.REDIS_PORT, db=0)
+        sessionRedis = Redis( **config.SESSION_REDIS_CONFIGS )
 
         if not hasattr(config, 'MONGO_CONFIGS'):
             raise ValueError("MONGO_CONFIGS must be configured.")

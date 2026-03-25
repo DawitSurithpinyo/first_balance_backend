@@ -1,6 +1,9 @@
 import os
 
 from flask_limiter.util import get_remote_address
+from redis.retry import Retry
+from redis.exceptions import (TimeoutError, ConnectionError)
+from redis.backoff import ExponentialBackoff
 
 class ENV(object):
     DEV = "DEV"
@@ -39,10 +42,27 @@ class DevConfig(BaseConfig):
         "host": os.getenv('DEV_DATABASE_URL'),
         "tz_aware": True
     }
+
     REDIS_HOST = os.getenv('DEV_REDIS_HOST')
     REDIS_USER = os.getenv('DEV_REDIS_USER')
     REDIS_PASS = os.getenv('DEV_REDIS_PASS')
     REDIS_PORT = os.getenv('DEV_REDIS_PORT')
+    REDIS_HEALTH_CHECK_INTERVAL = 25
+    REDIS_RETRY = Retry(ExponentialBackoff(cap=10, base=1), retries=25)
+    REDIS_RETRY_ON_ERROR = [ConnectionError, TimeoutError]
+    REDIS_SOCKET_KEEPALIVE = True
+
+    SESSION_REDIS_CONFIGS = {
+        "host": REDIS_HOST,
+        "username": REDIS_USER,
+        "password": REDIS_PASS,
+        "port": REDIS_PORT,
+        "db": 0,
+        "health_check_interval": REDIS_HEALTH_CHECK_INTERVAL,
+        "retry": REDIS_RETRY,
+        "retry_on_error": REDIS_RETRY_ON_ERROR,
+        "socket_keepalive": REDIS_SOCKET_KEEPALIVE
+    }
 
     LIMITER_CONFIGS = {
         "key_func": get_remote_address,
@@ -51,9 +71,13 @@ class DevConfig(BaseConfig):
         "meta_limits": ['5 per day'], # how many times client can hit any defined limits
         "headers_enabled": True,
         "storage_uri": f"redis://{REDIS_USER}:{REDIS_PASS}@{REDIS_HOST}:{REDIS_PORT}/1",
-        # "storage_options": {
-        #     "tz_aware": True
-        # }
+        "storage_options": {
+            "db": 1,
+            "health_check_interval": REDIS_HEALTH_CHECK_INTERVAL,
+            "retry": REDIS_RETRY,
+            "retry_on_error": REDIS_RETRY_ON_ERROR,
+            "socket_keepalive": REDIS_SOCKET_KEEPALIVE
+        }
     }
 
 class StagingConfig(BaseConfig):

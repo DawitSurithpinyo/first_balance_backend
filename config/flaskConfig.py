@@ -4,6 +4,7 @@ from flask_limiter.util import get_remote_address
 from redis.retry import Retry
 from redis.exceptions import (TimeoutError, ConnectionError)
 from redis.backoff import ExponentialBackoff
+from datetime import timedelta
 
 class ENV(object):
     DEV = "DEV"
@@ -13,7 +14,8 @@ class ENV(object):
 class BaseConfig(object):
     DEBUG = False
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SAMESITE = "Strict"
+    SESSION_COOKIE_PATH = "/"
         
 
 class DevConfig(BaseConfig):
@@ -26,6 +28,8 @@ class DevConfig(BaseConfig):
     SESSION_TYPE = "redis"
     SESSION_COOKIE_NAME = "First_balance"
     SESSION_COOKIE_SECURE = False
+    SESSION_LIFETIME = timedelta(days=7)
+    SESSION_ID_LENGTH = 128
 
 
     # Below are other custom configs that are not for the Flask app

@@ -36,7 +36,7 @@ def getConf() -> DevConfig | StagingConfig | ProdConfig:
             raise ValueError(f"Env variable 'ENV' has an unknown value: {env}")
 
     except Exception as e:
-        print("Error while trying to get ENV env variable: ")
+        print(f"Error while trying to get ENV env variable: {e}")
         traceback.print_exc()
         print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
 
@@ -50,13 +50,13 @@ def createApp(config: DevConfig | StagingConfig | ProdConfig) -> Flask:
         app.config.from_object(config)
         return app
         
-    except Exception as e:
+    except Exception:
         print("Error while setting up server configs: ")
         traceback.print_exc()
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on initiating server config: {e}",
+                "message": f"Internal server error on initiating server config",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -69,11 +69,15 @@ def initInfra(config: DevConfig | StagingConfig | ProdConfig) -> tuple[Redis, Mo
         Please supply config with any classes from `config/flaskConfig.py`, except `BaseConfig`.
     """
     try:
-        sessionRedis = Redis( **config.SESSION_REDIS_CONFIGS )
+        if hasattr(config, 'SESSION_REDIS_CONFIGS'):
+            sessionRedis = Redis( **config.SESSION_REDIS_CONFIGS )
+        else:
+            raise ValueError("SESSION_REDIS_CONFIGS must be configured.")
 
-        if not hasattr(config, 'MONGO_CONFIGS'):
+        if hasattr(config, 'MONGO_CONFIGS'):
+            mongoClient = MongoClient( **config.MONGO_CONFIGS )
+        else:
             raise ValueError("MONGO_CONFIGS must be configured.")
-        mongoClient = MongoClient( **config.MONGO_CONFIGS )
 
     except Exception:
         print("Error while setting up MongoDB and Redis for Session: ")
@@ -84,35 +88,52 @@ def initInfra(config: DevConfig | StagingConfig | ProdConfig) -> tuple[Redis, Mo
     return sessionRedis, mongoClient
 
 
-def initAppAddOns(app: Flask, config: DevConfig | StagingConfig | ProdConfig) -> tuple[PasswordHasher, Limiter]:
+def initAppAddOns(app: Flask, sessionRedis: Redis, config: DevConfig | StagingConfig | ProdConfig) -> tuple[PasswordHasher, Limiter]:
     """
         Add Session, CORS, Argon2 PasswordHasher, and API limiter. Return `passwordHasher` and `Limiter`.
+        `sessionRedis` is needed, because Flask-Session requires pointing `app.config['SESSION_REDIS']` to the desired Redis instance.
 
         Please supply config with any classes from `config/flaskConfig.py`, except `BaseConfig`.
     """
     try:
+        # Set app.config['SESSION_REDIS'] before setting Session to make sure Session point to the right Redis instance
+        # Have to individually assign config like this because this is how it must be done on Flask-Session :(
+        app.config['SESSION_REDIS'] = sessionRedis
+        app.config['SESSION_COOKIE_NAME'] = config.SESSION_COOKIE_NAME
+        app.config['SESSION_COOKIE_SECURE'] = config.SESSION_COOKIE_SECURE
+        app.config['SESSION_COOKIE_HTTPONLY'] = config.SESSION_COOKIE_HTTPONLY
+        app.config['SESSION_COOKIE_SAMESITE'] = config.SESSION_COOKIE_SAMESITE
+        app.config['SESSION_COOKIE_PATH'] = config.SESSION_COOKIE_PATH
+        app.config['PERMANENT_SESSION_LIFETIME'] = config.SESSION_LIFETIME
+        app.config['SESSION_ID_LENGTH'] = config.SESSION_ID_LENGTH
+
         Session(app)
+
         if hasattr(config, 'CORS_CONFIGS'):
             CORS(app, **config.CORS_CONFIGS)
         else:
-            CORS(app)
+            raise ValueError("Expect CORS configuration")
 
         if hasattr(config, 'ARGON2_PARAMS'):
             passwordHasher = PasswordHasher( **config.ARGON2_PARAMS )
         else:
+            # Argon2-cffi already provides sane default configs, so no custom config is fine
             passwordHasher = PasswordHasher()
 
-        limiter = Limiter( app=app, **config.LIMITER_CONFIGS )
+        if hasattr(config, 'LIMITER_CONFIGS'):
+            limiter = Limiter( app=app, **config.LIMITER_CONFIGS )
+        else:
+            raise ValueError("Expect Limiter configuration")
 
         return passwordHasher, limiter
     
-    except Exception as e:
+    except Exception:
         print("Error while setting up app Session and CORS: ")
         traceback.print_exc()
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up app Session and CORS: {e}",
+                "message": f"Internal server error on setting up app Session and CORS",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -121,13 +142,13 @@ def initAppAddOns(app: Flask, config: DevConfig | StagingConfig | ProdConfig) ->
 def initMiddlewares(app: Flask) -> None:
     try:
         app.before_request(authMiddleware.authMiddleware)
-    except Exception as e:
+    except Exception:
         print("Error while setting up auth middleware: ")
         traceback.print_exc()
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up auth middleware: {e}",
+                "message": f"Internal server error on setting up auth middleware",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -148,13 +169,13 @@ def initViews(app: Flask, sessionRedis: Redis, mongoClient: MongoClient,
         authController.register(app, init_argument={"useCase": authUsecases, "limiter": limiter}, route_base='/auth', route_prefix=URL_PREFIX)
         transactionController.register(app, init_argument=transacUsecases, route_base='/transaction', route_prefix=URL_PREFIX)
 
-    except Exception as e:
+    except Exception:
         print("Error while setting up Flask views (API routes): ")
         traceback.print_exc()
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up Flask views (API routes) {e}",
+                "message": f"Internal server error on setting up Flask views (API routes)",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500

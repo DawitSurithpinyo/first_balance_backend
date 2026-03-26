@@ -73,7 +73,7 @@ class authController(FlaskView):
     @route("/getCredentials", methods=['GET'])
     def getCredentials(self):
         try:
-            with self.limiter.limit('1 per 2 seconds'): # too strict? But refreshes usually take at least 2 seconds, and legit users would have no incentive to spam refresh
+            with self.limiter.limit('3 per 1 second'):
                 try:
                     data, sessionDescription = self.authUsecase.retrieveCredentials()
                     @after_this_request

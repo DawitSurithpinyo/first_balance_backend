@@ -15,6 +15,9 @@ run:
 run-redis:
 	docker exec -it $$(docker ps -aqf "name=fb_redis") redis-cli --user Punn --askpass
 
+redis-dev:
+	docker exec -it $$(docker ps -aqf "name=fb_redis_dev") redis-cli --user Punn --askpass
+
 # curl will parse --user to "Authorization: Basic <token>" header
 mongo-admin-get-token:
 	@curl --request POST \

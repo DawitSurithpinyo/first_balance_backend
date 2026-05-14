@@ -35,7 +35,7 @@ class DevConfig(BaseConfig):
     CORS_CONFIGS = {
         "origins": [FRONT_END_URL],
         "supports_credentials": True,
-        "expose_headers": ["X-CSRF-Token"],
+        "expose_headers": ["X-CSRF-Token", "X-Request-ID"],
         "allow_headers": ["X-CSRF-Token", "Origin", "Content-Type", "Accept", "Authorization"]
     }
 

@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from redis import Redis
 from src.controllers.authController import authController
 from src.controllers.transactionController import transactionController
-from src.middleware import authMiddleware
+from src.middleware import authMiddleware, requestID
 from src.repositories.transactionRepo import transactionRepository
 from src.repositories.userRepo import userRepository
 from src.types.enums.responseCodes.setup import appSetupResponses
@@ -140,7 +140,13 @@ def initAppAddOns(app: Flask, sessionRedis: Redis, config: DevConfig | StagingCo
 
 
 def initMiddlewares(app: Flask) -> None:
+    """
+        Auth and Request ID middleware
+    """
     try:
+        requestID.registerRequestIDMiddleware(app)
+
+        app.before_request(requestID.addRequestIDCtx)
         app.before_request(authMiddleware.authMiddleware)
     except Exception:
         print("Error while setting up auth middleware: ")

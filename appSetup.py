@@ -56,7 +56,7 @@ def createApp(config: DevConfig | StagingConfig | ProdConfig) -> Flask:
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on initiating server config",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -133,7 +133,7 @@ def initAppAddOns(app: Flask, sessionRedis: Redis, config: DevConfig | StagingCo
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up app Session and CORS",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -154,7 +154,7 @@ def initMiddlewares(app: Flask) -> None:
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up auth middleware",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -181,7 +181,7 @@ def initViews(app: Flask, sessionRedis: Redis, mongoClient: MongoClient,
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up Flask views (API routes)",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500

@@ -27,11 +27,11 @@ def getConf() -> DevConfig | StagingConfig | ProdConfig:
         if env is None:
             raise ValueError("Missing env variable 'ENV'")
         if env == ENV.DEV:
-            return DevConfig
+            return DevConfig()
         elif env == ENV.STAGING:
-            return StagingConfig
+            return StagingConfig()
         elif env == ENV.PROD:
-            return ProdConfig
+            return ProdConfig()
         else:
             raise ValueError(f"Env variable 'ENV' has an unknown value: {env}")
 

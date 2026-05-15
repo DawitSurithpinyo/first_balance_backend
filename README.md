@@ -87,6 +87,7 @@ As soon as the user lands on the landing page, they will receive a CSRF token. C
 | userEmail | string | |
 | userName | string | |
 | signUpChoice | literal string 'GOOGLE' | |
+| userPictureLink | string | |
 
 <u>Response header</u>
 | Name | Note |

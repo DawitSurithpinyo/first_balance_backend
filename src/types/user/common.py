@@ -87,17 +87,4 @@ class googleUser(baseUser, extra='forbid'):
         Also because of security concerns.
     """
     signUpChoice: authChoice = authChoice.GOOGLE
-    userPictureLink: str = Field(exclude=True)
-
-
-
-
-class userForClient(BaseModel, extra='forbid'):
-    """
-        All of the above are only for within back end / DB.
-        This one is for returning to client only, regardless of normal/Google user.
-    """
-    userID: str
-    userEmail: str
-    userName: str
-    signUpChoice: authChoice
+    userPictureLink: str

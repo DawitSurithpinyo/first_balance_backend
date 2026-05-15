@@ -25,12 +25,16 @@ class baseUser(BaseModel, extra='forbid'):
         if v is None:
             return v
         try:
-            assert isinstance(v, datetime)
-            assert v.tzinfo is not None and v.utcoffset() == timedelta(0)
+            if not isinstance(v, datetime):
+                raise Exception("lastLoginTime or activatedTime is not of datetime type")
+            if v.tzinfo is None or not v.utcoffset() == timedelta(0):
+                raise Exception("lastLoginTime or activatedTime doesn't have timezone, or is not in UTC")
+            
             v = v.replace(tzinfo=timezone.utc) # make sure client get UTC
             return v
         except Exception as e:
-            raise AppError(f'Error while creating baseUser model: expect datetime.now(timezone.utc) for "lastLoginTime" and "activatedTime" fields. Details: {e}', 400)
+            print(f"Error creating baseUser model: {e}")
+            raise AppError("Invalid model", 400)
 
 
 class normalUser(baseUser, extra='forbid'):
@@ -65,8 +69,11 @@ class normalUser(baseUser, extra='forbid'):
         if v is None:
             return v
         try:
-            assert isinstance(v, datetime)
-            assert v.tzinfo is not None and v.utcoffset() == timedelta(0)
+            if not isinstance(v, datetime):
+                raise Exception("createdTime or resetPasswordExpireTime is not of datetime type")
+            if v.tzinfo is None or not v.utcoffset() == timedelta(0):
+                raise Exception("createdTime or resetPasswordExpireTime doesn't have timezone, or is not in UTC")
+            
             v = v.replace(tzinfo=timezone.utc) # make sure client get UTC
             return v
         except Exception as e:

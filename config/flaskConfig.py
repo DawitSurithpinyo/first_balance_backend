@@ -22,8 +22,7 @@ class DevConfig(BaseConfig):
     DEBUG = True
     SECRET_KEY = os.getenv("DEV_FLASK_SECRET_KEY")
 
-    # CACHE_TYPE = "RedisCache"
-    # CACHE_REDIS_URL = os.getenv('DEV_CACHE_REDIS_URL', 'no cache Redis url')
+    # Below are other custom configs that are not for the Flask app itself
 
     SESSION_TYPE = "redis"
     SESSION_COOKIE_NAME = "First_balance"
@@ -31,16 +30,14 @@ class DevConfig(BaseConfig):
     SESSION_LIFETIME = timedelta(days=7)
     SESSION_ID_LENGTH = 128
 
-
-    # Below are other custom configs that are not for the Flask app
     PORT = 5000
     FRONT_END_URL = 'http://localhost:5173'
     CORS_CONFIGS = {
         "origins": [FRONT_END_URL],
         "supports_credentials": True,
-        "expose_headers": ["X-CSRF-Token"], # custom headers must be exposed so that front-end can receive them
-        "allow_headers": ["X-CSRF-Token"]
-    } # For CORS()
+        "expose_headers": ["X-CSRF-Token", "X-Request-ID"],
+        "allow_headers": ["X-CSRF-Token", "Origin", "Content-Type", "Accept", "Authorization"]
+    }
 
     MONGO_CONFIGS = {
         "host": os.getenv('DEV_DATABASE_URL'),

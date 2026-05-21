@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from redis import Redis
 from src.controllers.authController import authController
 from src.controllers.transactionController import transactionController
-from src.middleware import authMiddleware
+from src.middleware import authMiddleware, requestID
 from src.repositories.transactionRepo import transactionRepository
 from src.repositories.userRepo import userRepository
 from src.types.enums.responseCodes.setup import appSetupResponses
@@ -27,11 +27,11 @@ def getConf() -> DevConfig | StagingConfig | ProdConfig:
         if env is None:
             raise ValueError("Missing env variable 'ENV'")
         if env == ENV.DEV:
-            return DevConfig
+            return DevConfig()
         elif env == ENV.STAGING:
-            return StagingConfig
+            return StagingConfig()
         elif env == ENV.PROD:
-            return ProdConfig
+            return ProdConfig()
         else:
             raise ValueError(f"Env variable 'ENV' has an unknown value: {env}")
 
@@ -56,7 +56,7 @@ def createApp(config: DevConfig | StagingConfig | ProdConfig) -> Flask:
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on initiating server config",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -133,14 +133,20 @@ def initAppAddOns(app: Flask, sessionRedis: Redis, config: DevConfig | StagingCo
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up app Session and CORS",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
 
 
 def initMiddlewares(app: Flask) -> None:
+    """
+        Auth and Request ID middleware
+    """
     try:
+        requestID.registerRequestIDMiddleware(app)
+
+        app.before_request(requestID.addRequestIDCtx)
         app.before_request(authMiddleware.authMiddleware)
     except Exception:
         print("Error while setting up auth middleware: ")
@@ -148,7 +154,7 @@ def initMiddlewares(app: Flask) -> None:
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up auth middleware",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -175,7 +181,7 @@ def initViews(app: Flask, sessionRedis: Redis, mongoClient: MongoClient,
         with app.app_context():
             return jsonify({
                 "success": False,
-                "message": f"Internal server error on setting up Flask views (API routes)",
+                "message": "Internal server error",
                 "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500

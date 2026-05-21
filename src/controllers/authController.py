@@ -21,8 +21,10 @@ class authController(FlaskView):
             self.authUsecase: authUsecase = args["useCase"]
             self.limiter: Limiter = args["limiter"]
 
-            assert self.authUsecase is not None and isinstance(self.authUsecase, authUsecase)
-            assert self.limiter is not None and isinstance(self.limiter, Limiter)
+            if self.authUsecase is None or not isinstance(self.authUsecase, authUsecase):
+                raise Exception("authUsecase object is not provided, or not of correct type")
+            if self.limiter is None or not isinstance(self.limiter, Limiter):
+                raise Exception("limiter is not provided, or not of type flask_limiter.Limiter")
 
         except Exception as e:
             print(f"Error while constructing authController(): {e}")
@@ -34,7 +36,7 @@ class authController(FlaskView):
             try:
                 data = googleLoginRequest( **request.get_json() )
             except ValidationError as e:
-                raise AppError(f'Invalid request body for api/auth/googleLogin: {e}', 
+                raise AppError('Invalid request body', 
                                authResponses.googleLogin.ERROR_INVALID_REQUEST_BODY, 400)
 
             userCreds: googleUser = self.authUsecase.googleLogin(data=data)
@@ -65,7 +67,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.googleLogin: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.googleLogin.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -73,7 +75,7 @@ class authController(FlaskView):
     @route("/getCredentials", methods=['GET'])
     def getCredentials(self):
         try:
-            with self.limiter.limit('1 per 2 seconds'): # too strict? But refreshes usually take at least 2 seconds, and legit users would have no incentive to spam refresh
+            with self.limiter.limit('3 per 1 second'):
                 try:
                     data, sessionDescription = self.authUsecase.retrieveCredentials()
                     @after_this_request
@@ -85,7 +87,7 @@ class authController(FlaskView):
                         redirect('/')
                         return jsonify({
                             "success": True,
-                            "message": "Created a new pre-login session with a new CSRF token.",
+                            "message": "Created a new pre-login session.",
                             "messageCode": authResponses.getCredentials.SUCCESS_NEW_PRELOGIN_SESSION,
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         }), 201
@@ -94,7 +96,7 @@ class authController(FlaskView):
                         redirect('/')
                         return jsonify({
                             "success": True,
-                            "message": "Retrieved the CSRF token of existing pre-login session.",
+                            "message": "Retrieved the existing pre-login session.",
                             "messageCode": authResponses.getCredentials.SUCCESS_EXISTING_PRELOGIN_SESSION,
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         }), 200
@@ -103,14 +105,14 @@ class authController(FlaskView):
                         redirect('/dashboard')
                         return jsonify({
                             "success": True,
-                            "message": "Retrieved the credentials of existing post-login session.",
+                            "message": "Retrieved the existing post-login session.",
                             "messageCode": authResponses.getCredentials.SUCCESS_EXISTING_POSTLOGIN_SESSION,
                             "data": data.model_dump(exclude_none=True),
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         }), 200
                     
-                except RateLimitExceeded as e:
-                    raise AppError(f'Route rate limit exceeded. Details: {e}',
+                except RateLimitExceeded:
+                    raise AppError('Route rate limit exceeded. Details',
                                 authResponses.getCredentials.ERROR_RATE_LIMIT_EXCEEDED, 429)
             
         except Exception as e:
@@ -125,7 +127,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.getCredentials: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.getCredentials.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -139,7 +141,7 @@ class authController(FlaskView):
                     try: # Pydantic exception
                         data = manualSignInRequest( **request.get_json() )
                     except ValidationError as e:
-                        raise AppError(f'Invalid request body for api/auth/signIn: {e}', 
+                        raise AppError('Invalid request body', 
                                     authResponses.signIn.ERROR_INVALID_REQUEST_BODY, 400)
 
                     result: normalUser = self.authUsecase.signIn(data=data)
@@ -157,7 +159,7 @@ class authController(FlaskView):
                     }), 201
                 
                 except RateLimitExceeded as e:
-                    raise AppError(f'Route rate limit exceeded. Details: {e}',
+                    raise AppError('Route rate limit exceeded',
                                    authResponses.signIn.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
@@ -172,7 +174,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.signIn: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.signIn.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -185,7 +187,7 @@ class authController(FlaskView):
                     try:
                         data = manualSignUpRequest( **request.get_json() )
                     except ValidationError as e:
-                        raise AppError(f'Invalid request body for api/auth/signUp: {e}',
+                        raise AppError('Invalid request body',
                                     authResponses.signUp.ERROR_INVALID_REQUEST_BODY, 400)
                     
                     self.authUsecase.signUp(data=data)
@@ -197,7 +199,7 @@ class authController(FlaskView):
                     }), 201
                 
                 except RateLimitExceeded as e:
-                    raise AppError(f'Rate limit exceeded. Details: {e}'
+                    raise AppError('Rate limit exceeded'
                            , authResponses.signUp.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
         except Exception as e:
@@ -213,7 +215,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.signUp: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.signUp.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -247,7 +249,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.activateAccount: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.activateAccount.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -260,7 +262,7 @@ class authController(FlaskView):
                     try:
                         data = forgotPasswordRequest( **request.get_json() )
                     except ValidationError as e:
-                        raise AppError(f"Invalid request body for api/auth/requestForgotPassword: {e}",
+                        raise AppError("Invalid request body",
                                     authResponses.requestForgotPassword.ERROR_INVALID_REQUEST_BODY, 400)
                     
                     # WHY do I need to return token to the client when an email is sent to them??
@@ -275,7 +277,7 @@ class authController(FlaskView):
                     }), 201
                 
                 except RateLimitExceeded as e:
-                    raise AppError(f'Rate limit exceeded. Details: {e}'
+                    raise AppError('Rate limit exceeded'
                            , authResponses.requestForgotPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
@@ -290,7 +292,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.requestForgotPassword: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.requestForgotPassword.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500 
@@ -301,7 +303,7 @@ class authController(FlaskView):
             try:
                 data = resetPasswordRequest( **request.get_json() )
             except ValidationError as e:
-                raise AppError(f"Invalid request body for api/auth/resetPassword: {e}",
+                raise AppError("Invalid request body",
                                authResponses.resetPassword.ERROR_INVALID_REQUEST_BODY, 400)
             
             token = request.args.get("token", default = None, type = str)
@@ -330,7 +332,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.resetPassword: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.resetPassword.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500 
@@ -358,7 +360,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.logout: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.logout.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -369,7 +371,7 @@ class authController(FlaskView):
             try:
                 data = deleteAccountRequest( **request.get_json() )
             except ValidationError as e:
-                raise AppError(f'Invalid request body for api/auth/deleteAccount: {e}',
+                raise AppError('Invalid request body',
                                authResponses.deleteAccount.ERROR_INVALID_REQUEST_BODY, 400)
             
             self.authUsecase.deleteAccount(userID=data.userID)
@@ -393,7 +395,7 @@ class authController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on authController.deleteAccount: {e}",
+                "message": "Internal server error",
                 "messageCode": authResponses.deleteAccount.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500

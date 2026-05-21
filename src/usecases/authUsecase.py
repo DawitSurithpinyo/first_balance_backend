@@ -1,12 +1,16 @@
 import secrets
+import traceback
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 import google_auth_oauthlib.flow
+from google.oauth2 import id_token
+from google.auth.transport import requests
 from argon2 import PasswordHasher, exceptions
-from config.googleOAuthConfig import DEV_CLIENT_SECRETS_FILE, SCOPES
+from config.googleOAuthConfig import (DEV_CLIENT_SECRETS_FILE, 
+                                      DEV_CLIENT_ID,
+                                      SCOPES)
 from flask import Flask, current_app, request, session
-from googleapiclient.discovery import build
 from pydantic import ValidationError
 from redis import Redis
 from src.repositories.transactionRepo import transactionRepository
@@ -33,41 +37,68 @@ class authUsecase():
                  redisSession: Redis,
                  pwHasher: PasswordHasher,
                  conf: DevConfig | ProdConfig):
-        self.userRepo = userRepo
-        self.transactionRepo = transactionRepo
-        self.app = flaskApp
-        self.redisSession = redisSession
-        self.passwordHasher = pwHasher
-        self.config = conf
+        try:
+            if userRepo is None or not isinstance(userRepo, userRepository):
+                raise Exception("userRepo argument is not provided, or is not of correct type")
+            if transactionRepo is None or not isinstance(transactionRepo, transactionRepository):
+                raise Exception("transactionRepo argument is not provided, or is not of correct type")
+            if flaskApp is None or not isinstance(flaskApp, Flask):
+                raise Exception("flaskApp argument is not provided, or is not of correct type")
+            if redisSession is None or not isinstance(redisSession, Redis):
+                raise Exception("userRepo argument is not provided, or is not of correct type")
+            if pwHasher is None or not isinstance(pwHasher, PasswordHasher):
+                raise Exception("pwHasher argument is not provided, or is not of correct type")
+            if conf is None or not isinstance(conf, (DevConfig, ProdConfig)):
+                raise Exception("conf argument is not provided, or is not of one of the valid types")
+
+            self.userRepo = userRepo
+            self.transactionRepo = transactionRepo
+            self.app = flaskApp
+            self.redisSession = redisSession
+            self.passwordHasher = pwHasher
+            self.config = conf
+
+        except Exception as e:
+            print(f"Error constructing authUsecase: {e}")
+            traceback.print_exc()
+
 
     def googleLogin(self, data: googleLoginRequest) -> googleUser:
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
             DEV_CLIENT_SECRETS_FILE,
             scopes=SCOPES,
-            state=request.headers.get('CSRFToken', type = str)
+            state=request.headers.get('X-CSRF-Token', type = str)
         )
         flow.redirect_uri = 'postmessage'
 
-        # Exchange authorization code for refresh and access tokens
+        # Exchange authorization code for ID Token
         flow.fetch_token(code=data.code)
         flowCreds = flow.credentials
 
-        # Extract user's Google profile info
-        userInfoService = build(serviceName='oauth2', version='v2', credentials=flowCreds)
-        userInfo = userInfoService.userinfo().get().execute()
+        # Verify ID Token
+        idTokenClaim = id_token.verify_oauth2_token(flowCreds.id_token, requests.Request(), DEV_CLIENT_ID)
+        if idTokenClaim["aud"] != DEV_CLIENT_ID:
+            raise AppError("Internal server error",
+                           authResponses.googleLogin.INTERNAL_SERVER_ERROR_INVALID_CLIENT_ID, 500)
+        if not idTokenClaim["email_verified"]:
+            raise AppError("Google email not verified.",
+                           authResponses.googleLogin.ERROR_UNVERIFIED_GOOGLE_EMAIL, 400)
 
         user = {
-            "userEmail": userInfo['email'],
-            "userName": userInfo['name'],
-            "userPictureLink": userInfo['picture']
+            "userEmail": idTokenClaim['email'],
+            "userName": idTokenClaim['name'],
+            "userPictureLink": idTokenClaim['picture']
+            # Intentionally not storing idTokenClaim["sub"] here, I didn't make proper separation between internal models and DTOs
+            # And to change schema now is kind of disastrous
+            # aauuughgghhhhhhhhhhhhh
         }
         
         # Check if user with this email already exists
         # If not, make sure to activate their account
-        exists = self.userRepo.getUserCredentials(filter = {"userEmail": userInfo['email']})
+        exists = self.userRepo.getUserCredentials(filter = {"userEmail": idTokenClaim['email']})
 
         if exists is not None and exists['signUpChoice'] == authChoice.MANUAL:
-            raise AppError('Error from authUsecase.googleLogin: User cannot login via Google OAuth, as their first sign up was done via manual sign up method.',
+            raise AppError('User cannot login via Google OAuth, as their first sign up was done via manual sign up method.',
                            authResponses.googleLogin.ERROR_INVALID_LOGIN_METHOD, 400)
         
         if exists is None:
@@ -78,11 +109,11 @@ class authUsecase():
 
         try:
             result = self.userRepo.patchUserCredentials(user, 
-                        filter = {"userEmail": userInfo['email']})
+                        filter = {"userEmail": idTokenClaim['email']})
             result['userID'] = str(result.pop('_id'))
             result = googleUser( **result )
-        except ValidationError as e:
-            raise AppError(f'Error from authUsecase.googleLogin: Invalid userRepo.patchUserCredentials return data. Details: {e}',
+        except ValidationError:
+            raise AppError("Internal server error",
                            authResponses.googleLogin.ERROR_INVALID_RESULT_FROM_DB, 500)
         
         session.clear() # Clear pre-login session
@@ -90,9 +121,6 @@ class authUsecase():
             "userID": result.userID,
             "CSRFToken": secrets.token_urlsafe(128),
             "needTransactionsReFetch": True,
-            "accessToken": flowCreds.token,
-            "refreshToken": flowCreds.refresh_token,
-            "grantedScopes": flowCreds.granted_scopes
         } ).model_dump(exclude_none=True) )
         current_app.session_interface.regenerate(session) # regenerate session ID
 
@@ -139,11 +167,11 @@ class authUsecase():
                 elif result['signUpChoice'] == authChoice.MANUAL:
                     res = normalUser( **result )
                     return res, "postLogin"
-            except ValidationError as e:
-                raise AppError(f'Error from authUsecase.retrieveCredentials: Invalid userCredentials data returned from userRepo.getUserCredentials() for "postLogin." Details: {e}',
+            except ValidationError:
+                raise AppError("Internal server error",
                                authResponses.getCredentials.ERROR_INVALID_DB_RESULT_FOR_POSTLOGIN, 500)
         
-        raise AppError('Error from authUsecase.retrieveCredentials: server session not valid.',
+        raise AppError("Internal server error",
                        authResponses.getCredentials.ERROR_MALFORMED_SERVER_SESSION, 500)
 
     def signIn(self, data: manualSignInRequest) -> normalUser:
@@ -151,27 +179,27 @@ class authUsecase():
         try:
             user = self.userRepo.getUserCredentials(filter = {"userEmail": data.userEmail})
             if user is None:
-                raise AppError("Error from authUsecase.signIn: this user doesn't exists.",
-                               authResponses.signIn.ERROR_USER_DOESNT_EXISTS, 400)
+                raise AppError('username or password is incorrect.',
+                           authResponses.signIn.ERROR_INCORRECT_PASSWORD, 400)
             if user['signUpChoice'] == authChoice.GOOGLE:
-                raise AppError("Error from authUsecase.signIn: User cannot login via manual sign in, as their first sign up was done via Google OAuth method.",
+                raise AppError("User cannot login via manual sign in, as their first sign up was done via Google OAuth method.",
                                authResponses.signIn.ERROR_INVALID_LOGIN_METHOD, 400)
             
             user['userID'] = str(user.pop('_id'))
             cred = normalUser( **user )
-        except ValidationError as e:
-            raise AppError(f'Error from authUsecase.signIn: Invalid userRepo.getUserCredentials return data. Details: {e}',
+        except ValidationError:
+            raise AppError("Internal server error",
                            authResponses.signIn.ERROR_INVALID_GETCREDENTIALS_DATA, 500)
         
         if cred.activatedTime is None:
-            raise AppError('Error from authUsecase.signIn: this user has not activated their account yet.',
+            raise AppError('This user has not activated their account yet.',
                            authResponses.signIn.ERROR_UNACTIVATED_ACCOUNT, 400)
         
         # Check password
         try:
             self.passwordHasher.verify(cred.hashedPassword, data.password)
         except exceptions.VerifyMismatchError:
-            raise AppError('Error from authUsecase.signIn: userName or password is incorrect.',
+            raise AppError('username or password is incorrect.',
                            authResponses.signIn.ERROR_INCORRECT_PASSWORD, 400)
         
         user = {
@@ -190,8 +218,8 @@ class authUsecase():
             )
             result['userID'] = str(result.pop('_id'))
             result = normalUser( **result )
-        except ValidationError as e:
-            raise AppError(f'Error from authUsecase.signIn: Invalid userRepo.patchUserCredentials return data. Details: {e}',
+        except ValidationError:
+            raise AppError("Internal server error",
                            authResponses.signIn.ERROR_INVALID_PATCH_FROM_DB, 500)
         
         session.clear() # Clear pre-login session
@@ -211,7 +239,7 @@ class authUsecase():
             projection = {'_id': True}
         )
         if exists is not None:
-            raise AppError('Error from authUsecase.signUp: user with this email already exists.',
+            raise AppError('User with this email already exists.',
                            authResponses.signUp.ERROR_EMAIL_ALREADY_EXISTS, 400)
         
         token = secrets.token_urlsafe(128)
@@ -255,7 +283,7 @@ class authUsecase():
         try:
             normalUser( **result )
         except ValidationError as e:
-            raise AppError(f'Error from authUsecase.signUp: Invalid userRepo.patchUserCredentials return data. Details: {e}',
+            raise AppError("Internal server error",
                            authResponses.signUp.ERROR_INVALID_PATCH_FROM_DB, 500)
         
     def activateAccount(self, token: str) -> normalUser:
@@ -263,7 +291,7 @@ class authUsecase():
             filter={'activationToken': token}, projection={'_id': True, 'activatedTime': True, 'userEmail': True}
         )
         if exists is None or ('activatedTime' in exists.keys() and exists['activatedTime'] is not None):
-            raise AppError("Error from authUsecase.activateAccount: user with this email doesn't exists, or has already activated their account.",
+            raise AppError("User with this email doesn't exists, or has already activated their account.",
                            authResponses.activateAccount.ERROR_EMAIL_DOESNT_EXISTS_OR_ACTIVATED, 400)
         
         id = convertStrToObjectID(field=exists["_id"], fieldName='userID', originFuncName='authUsecase.activateAccount')
@@ -279,8 +307,8 @@ class authUsecase():
             result['userID'] = str(result.pop('_id'))
             result = normalUser( **result )
             return result
-        except ValidationError as e:
-            raise AppError("Error from authUsecase.activateAccount: Invalid return data.",
+        except ValidationError:
+            raise AppError("Internal server error",
                            authResponses.activateAccount.ERROR_INVALID_PATCH_FROM_DB, 500)
         
     def requestForgotPassword(self, data: forgotPasswordRequest) -> str:
@@ -292,7 +320,7 @@ class authUsecase():
             filter={'userEmail': data.userEmail}, projection={'_id': True}
         )
         if not exists:
-            raise AppError("Error from authUsecase.requestForgotPassword: User with this email doesn't exists.",
+            raise AppError("User with this email doesn't exists.",
                            authResponses.requestForgotPassword.ERROR_EMAIL_DOESNT_EXISTS, 400)
         
         token = secrets.token_urlsafe(128)
@@ -324,8 +352,8 @@ class authUsecase():
             )
             result['userID'] = str(result.pop('_id'))
             result = normalUser( **result )
-        except ValidationError as e:
-            raise AppError(f"Error from authUsecase.requestForgotPassword: Invalid userRepo.patchUserCredentials return data. Details: {e}",
+        except ValidationError:
+            raise AppError("Internal server error",
                            authResponses.requestForgotPassword.ERROR_INVALID_PATCH_FROM_DB, 500)
 
         return token
@@ -337,12 +365,12 @@ class authUsecase():
         )
 
         if not exists:
-            raise AppError("Error from authUsecase.resetPassword: Token invalid, or user doesn't exists, or hasn't requested for password reset token yet.",
+            raise AppError("Token invalid, or user doesn't exists, or hasn't requested for password reset token yet.",
                            authResponses.resetPassword.ERROR_INVALID_TOKEN_OR_EMAIL_DOESNT_EXISTS, 400)
         
         present = datetime.now(timezone.utc)
         if exists['resetPasswordExpireTime'] < present:
-            raise AppError("Error from authUsecase.resetPassword: The window to reset password has expired.",
+            raise AppError("The window to reset password has expired.",
                            authResponses.resetPassword.ERROR_RESET_WINDOW_EXPIRED, 400)
         
         hashcode = self.passwordHasher.hash(data.newPassword)
@@ -359,15 +387,15 @@ class authUsecase():
         try:
             result = normalUser( **result )
             return result
-        except ValidationError as e:
-            raise AppError("Error from authUsecase.resetPassword: Invalid return data.",
+        except ValidationError:
+            raise AppError("Internal server error",
                            authResponses.resetPassword.ERROR_INVALID_PATCH_FROM_DB, 500)
 
         
     def logout(self) -> None:
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
-            raise AppError('Error from authUsecase.logout: Invalid session format, likely because user is not authenticated.',
+            raise AppError('User is not authenticated.',
                            authResponses.logout.ERROR_UNAUTHENTICATED_SESSION, 401)
         
         session.clear()
@@ -376,7 +404,7 @@ class authUsecase():
     def deleteAccount(self, userID: str) -> None:
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
-            raise AppError('Error from authUsecase.deleteAccount: Invalid session format, likely because user is not authenticated.',
+            raise AppError('User is not authenticated.',
                            authResponses.deleteAccount.ERROR_UNAUTHENTICATED_SESSION, 401)
         
         id = convertStrToObjectID(field=userID, fieldName='userID', originFuncName='authUsecase.deleteAccount')

@@ -23,7 +23,7 @@ class transactionUsecase:
         """
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
-            raise AppError('Error from transactionUsecase.getTransactions: Invalid session format, likely because user is not authenticated.',
+            raise AppError('User is not authenticated.',
                            transactionResponses.getAllTransactions.ERROR_UNAUTHENTICATED_SESSION, 401)
         
         if not session['needTransactionsReFetch']:
@@ -37,8 +37,8 @@ class transactionUsecase:
                 try:
                     transaction = transactionData( **transaction )
                     transaction = transaction.model_dump()
-                except ValidationError as e:
-                    raise AppError(f'Error from transactionUsecase.getTransactions: Document ID {transaction["transactionID"]} returned from transactionRepository.getTransactions is invalid for type transactionData. Details: {e}',
+                except ValidationError:
+                    raise AppError("Internal DB error",
                                    transactionResponses.getAllTransactions.ERROR_INVALID_GET_FROM_DB, 500)
                 
         session['needTransactionsReFetch'] = False
@@ -48,7 +48,7 @@ class transactionUsecase:
     def addTransaction(self, data: newTransactionData) -> str:
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
-            raise AppError('Error from transactionUsecase.addTransaction: Invalid session format, likely because user is not authenticated.',
+            raise AppError('User is not authenticated.',
                            transactionResponses.addTransaction.ERROR_UNAUTHENTICATED_SESSION, 401)
         
         d = data.model_dump()
@@ -62,7 +62,7 @@ class transactionUsecase:
     def deleteOne(self, transactionID: str) -> None:
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
-            raise AppError('Error from transactionUsecase.deleteOne: Invalid session format, likely because user is not authenticated.',
+            raise AppError('User is not authenticated.',
                            transactionResponses.deleteOne.ERROR_UNAUTHENTICATED_SESSION, 401)
         
         transactionID = convertStrToObjectID(field=transactionID, fieldName='transactionID', originFuncName='transactionUsecase.deleteOne')
@@ -76,7 +76,7 @@ class transactionUsecase:
         """
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
-            raise AppError('Error from transactionUsecase.deleteMany: Invalid session format, likely because user is not authenticated.',
+            raise AppError('User is not authenticated.',
                            transactionResponses.deleteMany.ERROR_UNAUTHENTICATED_SESSION, 401)
         
         if len(transactionIDs) > 0:
@@ -92,7 +92,7 @@ class transactionUsecase:
     def updateTransaction(self, transaction: partialTransaction) -> bool:
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
-            raise AppError('Error from transactionUsecase.updateTransaction: Invalid session format, likely because user is not authenticated.',
+            raise AppError('User is not authenticated.',
                            transactionResponses.update.ERROR_UNAUTHENTICATED_SESSION, 401)
         
         check = transaction.model_dump()

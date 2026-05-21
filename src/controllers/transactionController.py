@@ -15,25 +15,30 @@ from src.usecases.transactionUsecase import transactionUsecase
 
 class transactionController(FlaskView):
     def __init__(self, useCase: transactionUsecase):
-        self.transactionUsecase = useCase
+        try:
+            if useCase is None or not isinstance(useCase, transactionUsecase):
+                raise Exception("useCase is not provided, or not of correct type")
+            self.transactionUsecase = useCase
+
+        except Exception as e:
+            print(f"Error while constructing transactionController(): {e}")
+            traceback.print_exc()
 
     @route("/get", methods=['GET'])
     def getAllTransactions(self):
         try:
             transactions: list | None = self.transactionUsecase.getTransactions()
             if transactions is None:
-                # 304 Not modified doesn't send any response body, so there's actually no need to make the response body
-                # But I want to put it for clarity.
                 return jsonify({
                     "success": True,
                     "message": "User's transactions data is up to date, no re-fetching is needed.",
                     "messageCode": transactionResponses.getAllTransactions.SUCCESS_NO_REFETCH_NEEDED,
                     "timestamp": datetime.now(timezone.utc).isoformat()
-                }), 304
+                }), 200
 
             return jsonify({
                 "success": True,
-                "message": "Retrieved user's data.",
+                "message": "Retrieved user's transaction data.",
                 "messageCode": transactionResponses.getAllTransactions.SUCCESS_FETCHED,
                 "data": transactions,
                 "timestamp": datetime.now(timezone.utc).isoformat()
@@ -50,7 +55,7 @@ class transactionController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on transactionController.getAllTransactions: {e}",
+                "message": "Internal server error",
                 "messageCode": transactionResponses.getAllTransactions.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -61,7 +66,7 @@ class transactionController(FlaskView):
             try:
                 data = newTransactionData( **request.get_json() )
             except ValidationError as e:
-                raise AppError(f'Invalid request body for api/transaction/add: {e}',
+                raise AppError('Invalid request body',
                                transactionResponses.addTransaction.ERROR_INVALID_REQUEST_BODY, 400)
             
             insertedID: str = self.transactionUsecase.addTransaction(data=data)
@@ -84,7 +89,7 @@ class transactionController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on transactionController.addTransaction: {e}",
+                "message": "Internal server error",
                 "messageCode": transactionResponses.addTransaction.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -95,13 +100,13 @@ class transactionController(FlaskView):
             try:
                 data = deleteOneTransactionRequest( **request.get_json() )
             except ValidationError as e:
-                raise AppError(f'Invalid request body for api/transaction/deleteOne: {e}',
+                raise AppError('Invalid request body',
                                transactionResponses.deleteOne.ERROR_INVALID_REQUEST_BODY, 400)
             
             self.transactionUsecase.deleteOne(transactionID=data.transactionID)
             return jsonify({
                 "success": True,
-                "message": f"Deleted a transaction with object ID {data.transactionID}.",
+                "message": "Deleted.",
                 "messageCode": transactionResponses.deleteOne.SUCCESS,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 200
@@ -118,7 +123,7 @@ class transactionController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on transactionController.deleteOne: {e}",
+                "message": "Internal server error",
                 "messageCode": transactionResponses.deleteOne.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500
@@ -129,7 +134,7 @@ class transactionController(FlaskView):
             try:
                 data = deleteManyTransactionsRequest( **request.get_json() )
             except ValidationError as e:
-                raise AppError(f'Invalid request body for api/transaction/deleteMany: {e}',
+                raise AppError('Invalid request body',
                                transactionResponses.deleteMany.ERROR_INVALID_REQUEST_BODY, 400)
             
             numberDeleted = self.transactionUsecase.deleteMany(transactionIDs=data.transactionIDsList)
@@ -151,7 +156,7 @@ class transactionController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on transactionController.deleteMany: {e}",
+                "message": "Internal server error",
                 "messageCode": transactionResponses.deleteMany.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500      
@@ -162,20 +167,20 @@ class transactionController(FlaskView):
             try:
                 data = partialTransaction( **request.get_json() )
             except ValidationError as e:
-                raise AppError(f'Invalid request body for api/transaction/update: {e}',
+                raise AppError('Invalid request body',
                                transactionResponses.update.ERROR_INVALID_REQUEST_BODY, 400)
             
             updated = self.transactionUsecase.updateTransaction(transaction=data)
             if not updated:
                 return jsonify({
                     "success": True,
-                    "message": "Only transactionID is provided, no update is made.",
+                    "message": "Only transactionID is provided, no update was made.",
                     "messageCode": transactionResponses.update.SUCCESS_NO_UPDATE,
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }), 200
             return jsonify({
                 "success": True,
-                "message": "Updated a transaction.",
+                "message": "Updated.",
                 "messageCode": transactionResponses.update.SUCCESS_UPDATED,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 200
@@ -192,7 +197,7 @@ class transactionController(FlaskView):
                 }), e.statusCode
             return jsonify({
                 "success": False,
-                "message": f"Unexpected internal server error on transactionController.update: {e}",
+                "message": "Internal server error",
                 "messageCode": transactionResponses.update.INTERNAL_SERVER_ERROR,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 500    

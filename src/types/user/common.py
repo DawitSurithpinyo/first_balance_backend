@@ -25,12 +25,16 @@ class baseUser(BaseModel, extra='forbid'):
         if v is None:
             return v
         try:
-            assert isinstance(v, datetime)
-            assert v.tzinfo is not None and v.utcoffset() == timedelta(0)
+            if not isinstance(v, datetime):
+                raise Exception("lastLoginTime or activatedTime is not of datetime type")
+            if v.tzinfo is None or not v.utcoffset() == timedelta(0):
+                raise Exception("lastLoginTime or activatedTime doesn't have timezone, or is not in UTC")
+            
             v = v.replace(tzinfo=timezone.utc) # make sure client get UTC
             return v
         except Exception as e:
-            raise AppError(f'Error while creating baseUser model: expect datetime.now(timezone.utc) for "lastLoginTime" and "activatedTime" fields. Details: {e}', 400)
+            print(f"Error creating baseUser model: {e}")
+            raise AppError("Invalid model", 400)
 
 
 class normalUser(baseUser, extra='forbid'):
@@ -65,8 +69,11 @@ class normalUser(baseUser, extra='forbid'):
         if v is None:
             return v
         try:
-            assert isinstance(v, datetime)
-            assert v.tzinfo is not None and v.utcoffset() == timedelta(0)
+            if not isinstance(v, datetime):
+                raise Exception("createdTime or resetPasswordExpireTime is not of datetime type")
+            if v.tzinfo is None or not v.utcoffset() == timedelta(0):
+                raise Exception("createdTime or resetPasswordExpireTime doesn't have timezone, or is not in UTC")
+            
             v = v.replace(tzinfo=timezone.utc) # make sure client get UTC
             return v
         except Exception as e:
@@ -76,21 +83,6 @@ class normalUser(baseUser, extra='forbid'):
 class googleUser(baseUser, extra='forbid'):
     """
         For users who sign up by Google OAuth.
-        Access token, refresh token, and granted scopes depends on each sign in, so keeping in Redis server session instead of DB.
-        Also because of security concerns.
     """
     signUpChoice: authChoice = authChoice.GOOGLE
-    userPictureLink: str = Field(exclude=True)
-
-
-
-
-class userForClient(BaseModel, extra='forbid'):
-    """
-        All of the above are only for within back end / DB.
-        This one is for returning to client only, regardless of normal/Google user.
-    """
-    userID: str
-    userEmail: str
-    userName: str
-    signUpChoice: authChoice
+    userPictureLink: str

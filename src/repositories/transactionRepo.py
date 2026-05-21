@@ -1,3 +1,4 @@
+import traceback
 from typing import Any
 
 from bson.objectid import ObjectId
@@ -6,8 +7,15 @@ from pymongo import MongoClient
 
 class transactionRepository:
     def __init__(self, mongo: MongoClient):
-        self.mongoClient = mongo
-        self.userDataDB = self.mongoClient['transactionsDB']
+        try:
+            if mongo is None or not isinstance(mongo, MongoClient):
+                raise Exception("mongo is not provided, or not of correct type")
+            self.mongoClient = mongo
+            self.userDataDB = self.mongoClient['transactionsDB']
+        
+        except Exception as e:
+            print(f"Error while constructing transactionRepository(): {e}")
+            traceback.print_exc()
 
     def getTransactions(self, userID: str) -> list[Any] | list[None]:
         col = self.userDataDB[f'{userID}']

@@ -47,7 +47,7 @@ def authMiddleware():
             }), e.statusCode
         return jsonify({
             "success": False,
-            "message": f"Unexpected internal server error on authMiddleware: {e}",
+            "message": "Internal server error",
             "messageCode": authResponses.middleware.INTERNAL_SERVER_ERROR,
             "datetime": datetime.now(timezone.utc).isoformat()
         }), 500

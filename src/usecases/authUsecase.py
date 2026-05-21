@@ -4,10 +4,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 import google_auth_oauthlib.flow
+from google.oauth2 import id_token
+from google.auth.transport import requests
 from argon2 import PasswordHasher, exceptions
-from config.googleOAuthConfig import DEV_CLIENT_SECRETS_FILE, SCOPES
+from config.googleOAuthConfig import (DEV_CLIENT_SECRETS_FILE, 
+                                      DEV_CLIENT_ID,
+                                      SCOPES)
 from flask import Flask, current_app, request, session
-from googleapiclient.discovery import build
 from pydantic import ValidationError
 from redis import Redis
 from src.repositories.transactionRepo import transactionRepository
@@ -64,27 +67,35 @@ class authUsecase():
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
             DEV_CLIENT_SECRETS_FILE,
             scopes=SCOPES,
-            state=request.headers.get('CSRFToken', type = str)
+            state=request.headers.get('X-CSRF-Token', type = str)
         )
         flow.redirect_uri = 'postmessage'
 
-        # Exchange authorization code for refresh and access tokens
+        # Exchange authorization code for ID Token
         flow.fetch_token(code=data.code)
         flowCreds = flow.credentials
 
-        # Extract user's Google profile info
-        userInfoService = build(serviceName='oauth2', version='v2', credentials=flowCreds)
-        userInfo = userInfoService.userinfo().get().execute()
+        # Verify ID Token
+        idTokenClaim = id_token.verify_oauth2_token(flowCreds.id_token, requests.Request(), DEV_CLIENT_ID)
+        if idTokenClaim["aud"] != DEV_CLIENT_ID:
+            raise AppError("Internal server error",
+                           authResponses.googleLogin.INTERNAL_SERVER_ERROR_INVALID_CLIENT_ID, 500)
+        if not idTokenClaim["email_verified"]:
+            raise AppError("Google email not verified.",
+                           authResponses.googleLogin.ERROR_UNVERIFIED_GOOGLE_EMAIL, 400)
 
         user = {
-            "userEmail": userInfo['email'],
-            "userName": userInfo['name'],
-            "userPictureLink": userInfo['picture']
+            "userEmail": idTokenClaim['email'],
+            "userName": idTokenClaim['name'],
+            "userPictureLink": idTokenClaim['picture']
+            # Intentionally not storing idTokenClaim["sub"] here, I didn't make proper separation between internal models and DTOs
+            # And to change schema now is kind of disastrous
+            # aauuughgghhhhhhhhhhhhh
         }
         
         # Check if user with this email already exists
         # If not, make sure to activate their account
-        exists = self.userRepo.getUserCredentials(filter = {"userEmail": userInfo['email']})
+        exists = self.userRepo.getUserCredentials(filter = {"userEmail": idTokenClaim['email']})
 
         if exists is not None and exists['signUpChoice'] == authChoice.MANUAL:
             raise AppError('User cannot login via Google OAuth, as their first sign up was done via manual sign up method.',
@@ -98,7 +109,7 @@ class authUsecase():
 
         try:
             result = self.userRepo.patchUserCredentials(user, 
-                        filter = {"userEmail": userInfo['email']})
+                        filter = {"userEmail": idTokenClaim['email']})
             result['userID'] = str(result.pop('_id'))
             result = googleUser( **result )
         except ValidationError:
@@ -110,9 +121,6 @@ class authUsecase():
             "userID": result.userID,
             "CSRFToken": secrets.token_urlsafe(128),
             "needTransactionsReFetch": True,
-            "accessToken": flowCreds.token,
-            "refreshToken": flowCreds.refresh_token,
-            "grantedScopes": flowCreds.granted_scopes
         } ).model_dump(exclude_none=True) )
         current_app.session_interface.regenerate(session) # regenerate session ID
 

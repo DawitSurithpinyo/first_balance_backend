@@ -29,14 +29,12 @@ class transactionController(FlaskView):
         try:
             transactions: list | None = self.transactionUsecase.getTransactions()
             if transactions is None:
-                # 304 Not modified doesn't send any response body, so there's actually no need to make the response body
-                # But I want to put it for clarity.
                 return jsonify({
                     "success": True,
                     "message": "User's transactions data is up to date, no re-fetching is needed.",
                     "messageCode": transactionResponses.getAllTransactions.SUCCESS_NO_REFETCH_NEEDED,
                     "timestamp": datetime.now(timezone.utc).isoformat()
-                }), 304
+                }), 200
 
             return jsonify({
                 "success": True,

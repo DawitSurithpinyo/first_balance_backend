@@ -392,7 +392,7 @@ One of the three
 
 <u>Endpoint</u>: [API host]/transaction/get
 
-<u>Description</u>: Get all transaction records of this user. If the list of transactions is up to date on the client side, it returns 304.
+<u>Description</u>: Get all transaction records of this user. If the list of transactions is up to date on the client side, it returns 200 but with different `messageCode` (see below).
 - Clicking refresh will trigger [GET /auth/getCredentials](#get-authgetcredentials), which set a flag that transactions must be fetch.
 
 <u>Rate limited</u>: No
@@ -401,10 +401,15 @@ One of the three
 | Status | Description |
 | ------ | ----------- |
 | 200 | OK |
-| 304 | Not modified |
 | 400 | Bad request |
 | 401 | Unauthorized |
 | 500 | Internal error |
+
+<u>Response messageCode</u>
+| Status | messageCode | description |
+| ------ | ----------- | ----------- |
+| 200 | SUCCESS_NO_REFETCH_NEEDED | no refetch done due to a flag inside the server-side session indicating that it's not needed |
+| 200 | SUCCESS_FETCHED | |
 
 <u>Response body</u>
 

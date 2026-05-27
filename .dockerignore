@@ -15,3 +15,4 @@ app.py
 .gitignore
 README.md
 .vscode
+redis.dev.conf

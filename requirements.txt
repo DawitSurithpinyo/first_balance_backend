@@ -16,6 +16,7 @@ Flask-Caching==2.3.1
 Flask-Classful==0.16.0
 flask-cors==6.0.1
 Flask-Limiter==3.12
+flask-request-id-middleware==1.1
 Flask-Session==0.8.0
 google-api-core==2.25.1
 google-api-python-client==2.177.0

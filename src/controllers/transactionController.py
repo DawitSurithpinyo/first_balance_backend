@@ -9,7 +9,7 @@ from src.types.error.AppError import AppError
 from src.types.transaction.DELETE import (deleteManyTransactionsRequest,
                                           deleteOneTransactionRequest)
 from src.types.transaction.PATCH import partialTransaction
-from src.types.transaction.POST import newTransactionData
+from src.types.transaction.POST import newTransactionData, createNewTransactionResponse
 from src.usecases.transactionUsecase import transactionUsecase
 
 
@@ -69,11 +69,12 @@ class transactionController(FlaskView):
                 raise AppError('Invalid request body',
                                transactionResponses.addTransaction.ERROR_INVALID_REQUEST_BODY, 400)
             
-            insertedID: str = self.transactionUsecase.addTransaction(data=data)
+            res: createNewTransactionResponse = self.transactionUsecase.addTransaction(data=data)
             return jsonify({
                 "success": True,
-                "message": f"Inserted a transaction with ID {insertedID}.",
+                "message": "Inserted",
                 "messageCode": transactionResponses.addTransaction.SUCCESS,
+                "data": res.model_dump(),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }), 201
         

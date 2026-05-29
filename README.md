@@ -455,6 +455,11 @@ List of:
 | 401 | Unauthorized |
 | 500 | Internal error |
 
+<u>Response body</u>
+| Name | Data type | Note |
+| ---- | --------- | ---- |
+| insertedID | string | |
+
 ***
 
 #### DELETE /deleteOne

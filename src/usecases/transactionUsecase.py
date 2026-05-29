@@ -7,7 +7,7 @@ from src.types.enums.responseCodes.transaction import transactionResponses
 from src.types.error.AppError import AppError
 from src.types.transaction.common import transactionData
 from src.types.transaction.PATCH import partialTransaction
-from src.types.transaction.POST import newTransactionData
+from src.types.transaction.POST import newTransactionData, createNewTransactionResponse
 from src.utils.checkSessionType import checkSessionType
 from src.utils.convertStrToOID import convertStrToObjectID
 
@@ -45,7 +45,7 @@ class transactionUsecase:
 
         return transactions
     
-    def addTransaction(self, data: newTransactionData) -> str:
+    def addTransaction(self, data: newTransactionData) -> createNewTransactionResponse:
         sessionType = checkSessionType(dict(session))
         if sessionType != "postLogin":
             raise AppError('User is not authenticated.',
@@ -57,7 +57,7 @@ class transactionUsecase:
         insertedID: str = self.transactionRepo.addTransaction(data=d, userID=session['userID'], returnDocumentID=True)
         session['needTransactionsReFetch'] = True
 
-        return insertedID
+        return createNewTransactionResponse( **{"insertedID": insertedID} )
     
     def deleteOne(self, transactionID: str) -> None:
         sessionType = checkSessionType(dict(session))

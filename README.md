@@ -58,7 +58,7 @@ As soon as the user lands on the landing page, they will receive a CSRF token. C
 
 <u>Description</u>: Take Google OAuth code from front end, validate, generate a server-side session and CSRF token, and return the user profile from Google.
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds
 
 <u>Request header</u>
 | Name | Note |
@@ -219,7 +219,7 @@ One of the three
 
 <u>Description</u>: Activate a new account
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds
 
 <u>Request header</u>
 | Name | Note |
@@ -295,7 +295,7 @@ One of the three
 
 <u>Description</u>: Submit a new password
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds
 
 <u>Request header</u>
 | Name | Note |
@@ -338,7 +338,7 @@ One of the three
 
 <u>Description</u>: Logout by deleting the server-side session of this user
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds
 
 <u>Request header</u>
 | Name | Note |
@@ -361,7 +361,7 @@ One of the three
 
 <u>Description</u>: Delete user account
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 10 seconds
 
 <u>Request header</u>
 | Name | Note |
@@ -395,7 +395,7 @@ One of the three
 <u>Description</u>: Get all transaction records of this user. If the list of transactions is up to date on the client side, it returns 200 but with different `messageCode` (see below).
 - Clicking refresh will trigger [GET /auth/getCredentials](#get-authgetcredentials), which set a flag that transactions must be fetch.
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 5 per 1 second
 
 <u>Response HTTP status code</u>
 | Status | Description |
@@ -431,7 +431,7 @@ List of:
 
 <u>Description</u>: Create a transaction
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 1 second
 
 <u>Request header</u>
 | Name | Note |
@@ -468,7 +468,7 @@ List of:
 
 <u>Description</u>: Delete a transaction
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 5 per 1 second
 
 <u>Request header</u>
 | Name | Note |
@@ -496,7 +496,7 @@ List of:
 
 <u>Description</u>: Delete a list of transactions
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 2 per 1 second
 
 <u>Request header</u>
 | Name | Note |
@@ -524,7 +524,7 @@ List of:
 
 <u>Description</u>: Update a transaction (probably should be changed to PUT)
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 2 per 1 second
 
 <u>Request header</u>
 | Name | Note |

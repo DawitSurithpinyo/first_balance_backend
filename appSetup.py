@@ -173,7 +173,7 @@ def initViews(app: Flask, sessionRedis: Redis, mongoClient: MongoClient,
         
         URL_PREFIX: str = '/api'
         authController.register(app, init_argument={"useCase": authUsecases, "limiter": limiter}, route_base='/auth', route_prefix=URL_PREFIX)
-        transactionController.register(app, init_argument=transacUsecases, route_base='/transaction', route_prefix=URL_PREFIX)
+        transactionController.register(app, init_argument={"useCase": transacUsecases, "limiter": limiter}, route_base='/transaction', route_prefix=URL_PREFIX)
 
     except Exception:
         print("Error while setting up Flask views (API routes): ")

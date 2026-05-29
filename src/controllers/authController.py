@@ -32,28 +32,34 @@ class authController(FlaskView):
     
     @route("/googleLogin", methods=['POST'])
     def googleLogin(self):
-        try:
-            try:
-                data = googleLoginRequest( **request.get_json() )
-            except ValidationError as e:
-                raise AppError('Invalid request body', 
-                               authResponses.googleLogin.ERROR_INVALID_REQUEST_BODY, 400)
+        try: 
+            with self.limiter.limit('1 per 5 seconds'):
+                try:
+                    try:
+                        data = googleLoginRequest( **request.get_json() )
+                    except ValidationError as e:
+                        raise AppError('Invalid request body', 
+                                    authResponses.googleLogin.ERROR_INVALID_REQUEST_BODY, 400)
 
-            userCreds: googleUser = self.authUsecase.googleLogin(data=data)
+                    userCreds: googleUser = self.authUsecase.googleLogin(data=data)
 
-            # Set custom header for CSRF token
-            @after_this_request
-            def addCSRFTokenHeader(response):
-                response.headers["X-CSRF-Token"] = session["CSRFToken"]
-                return response
-            
-            return jsonify({
-                "success": True,
-                "message": "Logged in via Google.",
-                "messageCode": authResponses.googleLogin.SUCCESS,
-                "data": userCreds.model_dump(exclude_none=True),
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 200
+                    # Set custom header for CSRF token
+                    @after_this_request
+                    def addCSRFTokenHeader(response):
+                        response.headers["X-CSRF-Token"] = session["CSRFToken"]
+                        return response
+                    
+                    return jsonify({
+                        "success": True,
+                        "message": "Logged in via Google.",
+                        "messageCode": authResponses.googleLogin.SUCCESS,
+                        "data": userCreds.model_dump(exclude_none=True),
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }), 200
+                
+                except RateLimitExceeded:
+                    raise AppError('Route rate limit exceeded.',
+                                authResponses.googleLogin.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
             print("Error on authController.googleLogin: ")
@@ -112,7 +118,7 @@ class authController(FlaskView):
                         }), 200
                     
                 except RateLimitExceeded:
-                    raise AppError('Route rate limit exceeded. Details',
+                    raise AppError('Route rate limit exceeded.',
                                 authResponses.getCredentials.ERROR_RATE_LIMIT_EXCEEDED, 429)
             
         except Exception as e:
@@ -223,19 +229,25 @@ class authController(FlaskView):
     @route("/activateAccount", methods=['POST']) 
     def activateAccount(self):
         try:
-            token = request.args.get('token', default=None, type=str)
-            if token is None:
-                raise AppError('Expect "token" parameter on URL query string.',
-                               authResponses.activateAccount.ERROR_INVALID_QUERY_STRING, 400)
-            
-            result: normalUser = self.authUsecase.activateAccount(token=token)
-            return jsonify({
-                "success": True,
-                "message": "Account activated.",
-                "messageCode": authResponses.activateAccount.SUCCESS,
-                "data": result.model_dump(exclude_none=True),
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 201
+            with self.limiter.limit('1 per 5 seconds'):
+                try:
+                    token = request.args.get('token', default=None, type=str)
+                    if token is None:
+                        raise AppError('Expect "token" parameter on URL query string.',
+                                    authResponses.activateAccount.ERROR_INVALID_QUERY_STRING, 400)
+                    
+                    result: normalUser = self.authUsecase.activateAccount(token=token)
+                    return jsonify({
+                        "success": True,
+                        "message": "Account activated.",
+                        "messageCode": authResponses.activateAccount.SUCCESS,
+                        "data": result.model_dump(exclude_none=True),
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }), 201
+                
+                except RateLimitExceeded as e:
+                    raise AppError('Rate limit exceeded'
+                        , authResponses.activateAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
             print("Error on authController.activateAccount: ")
@@ -300,25 +312,31 @@ class authController(FlaskView):
     @route("/resetPassword", methods=['POST'])
     def resetPassword(self):
         try:
-            try:
-                data = resetPasswordRequest( **request.get_json() )
-            except ValidationError as e:
-                raise AppError("Invalid request body",
-                               authResponses.resetPassword.ERROR_INVALID_REQUEST_BODY, 400)
-            
-            token = request.args.get("token", default = None, type = str)
-            if token is None:
-                raise AppError('Expect "token" parameter on the URL query string.',
-                               authResponses.resetPassword.ERROR_INVALID_QUERY_STRING, 400)
-            
-            result: normalUser = self.authUsecase.resetPassword(data=data, token=token)
-            return jsonify({
-                "success": True,
-                "message": "Password reset.",
-                "messageCode": authResponses.resetPassword.SUCCESS,
-                "data": result.model_dump(exclude_none=True),
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 201
+            with self.limiter.limit('1 per 5 seconds'):
+                try:
+                    try:
+                        data = resetPasswordRequest( **request.get_json() )
+                    except ValidationError as e:
+                        raise AppError("Invalid request body",
+                                    authResponses.resetPassword.ERROR_INVALID_REQUEST_BODY, 400)
+                    
+                    token = request.args.get("token", default = None, type = str)
+                    if token is None:
+                        raise AppError('Expect "token" parameter on the URL query string.',
+                                    authResponses.resetPassword.ERROR_INVALID_QUERY_STRING, 400)
+                    
+                    result: normalUser = self.authUsecase.resetPassword(data=data, token=token)
+                    return jsonify({
+                        "success": True,
+                        "message": "Password reset.",
+                        "messageCode": authResponses.resetPassword.SUCCESS,
+                        "data": result.model_dump(exclude_none=True),
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }), 201
+                
+                except RateLimitExceeded as e:
+                    raise AppError('Rate limit exceeded'
+                           , authResponses.resetPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
         except Exception as e:
             print("Error on authController.resetPassword: ")
@@ -340,13 +358,19 @@ class authController(FlaskView):
     @route("/logout", methods=['POST'])
     def logout(self):
         try:
-            self.authUsecase.logout()
-            return jsonify({
-                "success": True,
-                "message": "Logged out.",
-                "messageCode": authResponses.logout.SUCCESS,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 200
+            with self.limiter.limit('1 per 5 seconds'):
+                try:
+                    self.authUsecase.logout()
+                    return jsonify({
+                        "success": True,
+                        "message": "Logged out.",
+                        "messageCode": authResponses.logout.SUCCESS,
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }), 200
+                
+                except RateLimitExceeded as e:
+                    raise AppError('Rate limit exceeded'
+                           , authResponses.logout.ERROR_RATE_LIMIT_EXCEEDED, 429)                
         
         except Exception as e:
             print("Error on authController.logout: ")
@@ -368,20 +392,26 @@ class authController(FlaskView):
     @route("/deleteAccount", methods=['DELETE'])
     def deleteAccount(self):
         try:
-            try:
-                data = deleteAccountRequest( **request.get_json() )
-            except ValidationError as e:
-                raise AppError('Invalid request body',
-                               authResponses.deleteAccount.ERROR_INVALID_REQUEST_BODY, 400)
-            
-            self.authUsecase.deleteAccount(userID=data.userID)
-            # redirect("/")
-            return jsonify({
-                "success": True,
-                "message": "Account deleted.",
-                "messageCode": authResponses.deleteAccount.SUCCESS,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 200
+            with self.limiter.limit('1 per 10 seconds'):
+                try:
+                    try:
+                        data = deleteAccountRequest( **request.get_json() )
+                    except ValidationError as e:
+                        raise AppError('Invalid request body',
+                                    authResponses.deleteAccount.ERROR_INVALID_REQUEST_BODY, 400)
+                    
+                    self.authUsecase.deleteAccount(userID=data.userID)
+                    # redirect("/")
+                    return jsonify({
+                        "success": True,
+                        "message": "Account deleted.",
+                        "messageCode": authResponses.deleteAccount.SUCCESS,
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }), 200
+                
+                except RateLimitExceeded as e:
+                    raise AppError('Rate limit exceeded'
+                           , authResponses.deleteAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
         except Exception as e:
             print("Error on authController.deleteAccount: ")

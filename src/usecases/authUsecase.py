@@ -7,8 +7,8 @@ import google_auth_oauthlib.flow
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from argon2 import PasswordHasher, exceptions
-from config.googleOAuthConfig import (DEV_CLIENT_SECRETS_FILE, 
-                                      DEV_CLIENT_ID,
+from config.googleOAuthConfig import (CLIENT_SECRETS_FILE, 
+                                      CLIENT_ID,
                                       SCOPES)
 from flask import Flask, current_app, request, session
 from pydantic import ValidationError
@@ -65,7 +65,7 @@ class authUsecase():
 
     def googleLogin(self, data: googleLoginRequest) -> googleUser:
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-            DEV_CLIENT_SECRETS_FILE,
+            CLIENT_SECRETS_FILE,
             scopes=SCOPES,
             state=request.headers.get('X-CSRF-Token', type = str)
         )
@@ -76,8 +76,8 @@ class authUsecase():
         flowCreds = flow.credentials
 
         # Verify ID Token
-        idTokenClaim = id_token.verify_oauth2_token(flowCreds.id_token, requests.Request(), DEV_CLIENT_ID)
-        if idTokenClaim["aud"] != DEV_CLIENT_ID:
+        idTokenClaim = id_token.verify_oauth2_token(flowCreds.id_token, requests.Request(), CLIENT_ID)
+        if idTokenClaim["aud"] != CLIENT_ID:
             raise AppError("Internal server error",
                            authResponses.googleLogin.INTERNAL_SERVER_ERROR_INVALID_CLIENT_ID, 500)
         if not idTokenClaim["email_verified"]:

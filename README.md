@@ -462,7 +462,7 @@ List of:
 
 ***
 
-#### DELETE /deleteOne
+#### DELETE /transaction/deleteOne
 
 <u>Endpoint</u>: [API host]/transaction/deleteOne
 
@@ -490,7 +490,7 @@ List of:
 
 ***
 
-#### DELETE /deleteMany
+#### DELETE /transaction/deleteMany
 
 <u>Endpoint</u>: [API host]/transaction/deleteMany
 
@@ -518,7 +518,7 @@ List of:
 
 ***
 
-#### PATCH /update
+#### PATCH /transaction/update
 
 <u>Endpoint</u>: [API host]/transaction/update
 

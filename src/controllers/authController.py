@@ -33,7 +33,7 @@ class authController(FlaskView):
     @route("/googleLogin", methods=['POST'])
     def googleLogin(self):
         try: 
-            with self.limiter.limit('1 per 5 seconds'):
+            with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
                 try:
                     try:
                         data = googleLoginRequest( **request.get_json() )
@@ -142,7 +142,7 @@ class authController(FlaskView):
     def signIn(self):
         # What the hell is this. But I mean there is no other way to do it
         try: # any Exceptions
-            with self.limiter.limit('10 per minute'):
+            with self.limiter.limit('10 per minute', key_func=lambda: session.sid):
                 try: # limiter exception
                     try: # Pydantic exception
                         data = manualSignInRequest( **request.get_json() )
@@ -188,7 +188,7 @@ class authController(FlaskView):
     @route("/signUp", methods=['POST'])
     def signUp(self):
         try: # any Exceptions
-            with self.limiter.limit('1 per 10 seconds'):
+            with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
                 try: # limiter exception
                     try:
                         data = manualSignUpRequest( **request.get_json() )
@@ -229,7 +229,7 @@ class authController(FlaskView):
     @route("/activateAccount", methods=['POST']) 
     def activateAccount(self):
         try:
-            with self.limiter.limit('1 per 5 seconds'):
+            with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
                 try:
                     token = request.args.get('token', default=None, type=str)
                     if token is None:
@@ -269,7 +269,7 @@ class authController(FlaskView):
     @route("/requestForgotPassword", methods=['POST'])
     def requestForgotPassword(self):
         try: # any Exceptions
-            with self.limiter.limit('1 per 10 seconds'):
+            with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
                 try: # limiter exception
                     try:
                         data = forgotPasswordRequest( **request.get_json() )
@@ -312,7 +312,7 @@ class authController(FlaskView):
     @route("/resetPassword", methods=['POST'])
     def resetPassword(self):
         try:
-            with self.limiter.limit('1 per 5 seconds'):
+            with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
                 try:
                     try:
                         data = resetPasswordRequest( **request.get_json() )
@@ -358,7 +358,7 @@ class authController(FlaskView):
     @route("/logout", methods=['POST'])
     def logout(self):
         try:
-            with self.limiter.limit('1 per 5 seconds'):
+            with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
                 try:
                     self.authUsecase.logout()
                     return jsonify({
@@ -392,7 +392,7 @@ class authController(FlaskView):
     @route("/deleteAccount", methods=['DELETE'])
     def deleteAccount(self):
         try:
-            with self.limiter.limit('1 per 10 seconds'):
+            with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
                 try:
                     try:
                         data = deleteAccountRequest( **request.get_json() )

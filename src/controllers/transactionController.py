@@ -1,7 +1,7 @@
 import traceback
 from datetime import datetime, timezone
 
-from flask import jsonify, request
+from flask import jsonify, request, session
 from flask_classful import FlaskView, route
 from flask_limiter import Limiter, RateLimitExceeded
 from pydantic import ValidationError
@@ -35,7 +35,7 @@ class transactionController(FlaskView):
     @route("/get", methods=['GET'])
     def getAllTransactions(self):
         try:
-            with self.limiter.limit('5 per 1 second'):
+            with self.limiter.limit('5 per 1 second', key_func=lambda: session.sid):
                 try:
                     transactions: list | None = self.transactionUsecase.getTransactions()
                     if transactions is None:
@@ -78,7 +78,7 @@ class transactionController(FlaskView):
     @route("/add", methods=['POST'])
     def addTransaction(self):
         try:
-            with self.limiter.limit('1 per 1 second'):
+            with self.limiter.limit('1 per 1 second', key_func=lambda: session.sid):
                 try:
                     try:
                         data = newTransactionData( **request.get_json() )
@@ -119,7 +119,7 @@ class transactionController(FlaskView):
     @route("/deleteOne", methods=['DELETE']) 
     def deleteOne(self):
         try:
-            with self.limiter.limit('5 per 1 second'):
+            with self.limiter.limit('5 per 1 second', key_func=lambda: session.sid):
                 try:
                     try:
                         data = deleteOneTransactionRequest( **request.get_json() )
@@ -159,7 +159,7 @@ class transactionController(FlaskView):
     @route("/deleteMany", methods=['DELETE']) 
     def deleteMany(self):
         try:
-            with self.limiter.limit('2 per 1 second'):
+            with self.limiter.limit('2 per 1 second', key_func=lambda: session.sid):
                 try:
                     try:
                         data = deleteManyTransactionsRequest( **request.get_json() )
@@ -199,7 +199,7 @@ class transactionController(FlaskView):
     @route("/update", methods=['PATCH']) 
     def update(self):
         try:
-            with self.limiter.limit('5 per 1 second'):
+            with self.limiter.limit('5 per 1 second', key_func=lambda: session.sid):
                 try:
                     try:
                         data = partialTransaction( **request.get_json() )

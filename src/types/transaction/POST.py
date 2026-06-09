@@ -5,6 +5,8 @@ from src.types.enums.responseCodes.pydanticValidate import \
     pydanticValidationResponses
 from src.types.error.AppError import AppError
 
+class createNewTransactionResponse(BaseModel, extra='forbid'):
+    insertedID: str
 
 class newTransactionData(BaseModel, extra='forbid'):
     """

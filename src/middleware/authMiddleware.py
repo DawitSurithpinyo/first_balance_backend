@@ -1,10 +1,8 @@
-import traceback
-from datetime import datetime, timezone
-
-from flask import jsonify, request, session
+from flask import request, session, current_app
 from src.types.enums.responseCodes.auth import authResponses
 from src.types.error.AppError import AppError
 from src.utils.checkSessionType import checkSessionType
+from infrastructure.http.response import sendError
 
 # some endpoints are public or handle credential checking on their own
 whiteList = ['authController:getCredentials']
@@ -36,18 +34,5 @@ def authMiddleware():
                                authResponses.middleware.ERROR_INVALID_CSRF_TOKEN, 401)
         
     except Exception as e:
-        print("Error on auth middleware: ")
-        traceback.print_exc()
-        if isinstance(e, AppError):
-            return jsonify({
-                "success": False,
-                "message": e.message,
-                "messageCode": e.messageCode,
-                "datetime": datetime.now(timezone.utc).isoformat()
-            }), e.statusCode
-        return jsonify({
-            "success": False,
-            "message": "Internal server error",
-            "messageCode": authResponses.middleware.INTERNAL_SERVER_ERROR,
-            "datetime": datetime.now(timezone.utc).isoformat()
-        }), 500
+        with current_app.app_context():
+            return sendError(e)

@@ -5,6 +5,7 @@ class transactionResponses(Enum):
     class base:
         SUCCESS = 'SUCCESS'
         INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR'
+        ERROR_RATE_LIMIT_EXCEEDED = 'ERROR_RATE_LIMIT_EXCEEDED'
 
     class getAllTransactions(base):
         SUCCESS_NO_REFETCH_NEEDED = 'SUCCESS_NO_REFETCH_NEEDED'

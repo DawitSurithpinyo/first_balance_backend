@@ -7,10 +7,10 @@ import google_auth_oauthlib.flow
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from argon2 import PasswordHasher, exceptions
-from config.googleOAuthConfig import (DEV_CLIENT_SECRETS_FILE, 
-                                      DEV_CLIENT_ID,
+from config.googleOAuthConfig import (CLIENT_SECRETS_FILE, 
+                                      CLIENT_ID,
                                       SCOPES)
-from flask import Flask, current_app, request, session
+from flask import current_app, request, session
 from pydantic import ValidationError
 from redis import Redis
 from src.repositories.transactionRepo import transactionRepository
@@ -33,8 +33,6 @@ class authUsecase():
     def __init__(self, 
                  userRepo: userRepository,
                  transactionRepo: transactionRepository,
-                 flaskApp: Flask,
-                 redisSession: Redis,
                  pwHasher: PasswordHasher,
                  conf: DevConfig | ProdConfig):
         try:
@@ -42,10 +40,6 @@ class authUsecase():
                 raise Exception("userRepo argument is not provided, or is not of correct type")
             if transactionRepo is None or not isinstance(transactionRepo, transactionRepository):
                 raise Exception("transactionRepo argument is not provided, or is not of correct type")
-            if flaskApp is None or not isinstance(flaskApp, Flask):
-                raise Exception("flaskApp argument is not provided, or is not of correct type")
-            if redisSession is None or not isinstance(redisSession, Redis):
-                raise Exception("userRepo argument is not provided, or is not of correct type")
             if pwHasher is None or not isinstance(pwHasher, PasswordHasher):
                 raise Exception("pwHasher argument is not provided, or is not of correct type")
             if conf is None or not isinstance(conf, (DevConfig, ProdConfig)):
@@ -53,8 +47,6 @@ class authUsecase():
 
             self.userRepo = userRepo
             self.transactionRepo = transactionRepo
-            self.app = flaskApp
-            self.redisSession = redisSession
             self.passwordHasher = pwHasher
             self.config = conf
 
@@ -65,7 +57,7 @@ class authUsecase():
 
     def googleLogin(self, data: googleLoginRequest) -> googleUser:
         flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-            DEV_CLIENT_SECRETS_FILE,
+            CLIENT_SECRETS_FILE,
             scopes=SCOPES,
             state=request.headers.get('X-CSRF-Token', type = str)
         )
@@ -76,8 +68,8 @@ class authUsecase():
         flowCreds = flow.credentials
 
         # Verify ID Token
-        idTokenClaim = id_token.verify_oauth2_token(flowCreds.id_token, requests.Request(), DEV_CLIENT_ID)
-        if idTokenClaim["aud"] != DEV_CLIENT_ID:
+        idTokenClaim = id_token.verify_oauth2_token(flowCreds.id_token, requests.Request(), CLIENT_ID)
+        if idTokenClaim["aud"] != CLIENT_ID:
             raise AppError("Internal server error",
                            authResponses.googleLogin.INTERNAL_SERVER_ERROR_INVALID_CLIENT_ID, 500)
         if not idTokenClaim["email_verified"]:
@@ -398,8 +390,11 @@ class authUsecase():
             raise AppError('User is not authenticated.',
                            authResponses.logout.ERROR_UNAUTHENTICATED_SESSION, 401)
         
-        session.clear()
-        self.redisSession.delete(f"session:{session.sid}")
+        session.clear() # clear current session
+        session.update( sessionPreLogin(
+            CSRFToken = secrets.token_urlsafe(128)
+        ).model_dump(exclude_none=True) )
+        current_app.session_interface.regenerate(session) # regenerate session ID
 
     def deleteAccount(self, userID: str) -> None:
         sessionType = checkSessionType(dict(session))

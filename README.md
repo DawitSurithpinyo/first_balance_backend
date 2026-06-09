@@ -58,7 +58,7 @@ As soon as the user lands on the landing page, they will receive a CSRF token. C
 
 <u>Description</u>: Take Google OAuth code from front end, validate, generate a server-side session and CSRF token, and return the user profile from Google.
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -101,7 +101,7 @@ As soon as the user lands on the landing page, they will receive a CSRF token. C
 
 <u>Description</u>: Get user profile. This is called on refresh and landing page.
 
-<u>Rate limited</u>: 1 per 2 seconds
+<u>Rate limited</u>: 1 per 2 seconds by IP
 
 <u>Response HTTP status code</u>
 | Status | Description |
@@ -141,7 +141,7 @@ One of the three
 
 <u>Description</u>: Sign in with username and password.
 
-<u>Rate limited</u>: 10 per minute
+<u>Rate limited</u>: 10 per minute by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -186,7 +186,7 @@ One of the three
 
 <u>Description</u>: Create an account with username and password, and send an email to activate account to the email address provided by the user
 
-<u>Rate limited</u>: 1 per 10 seconds
+<u>Rate limited</u>: 1 per 10 seconds by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -219,7 +219,7 @@ One of the three
 
 <u>Description</u>: Activate a new account
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -257,7 +257,7 @@ One of the three
 
 <u>Description</u>: Request to change password, which will send an email to the user that contains the URL to reset password
 
-<u>Rate limited</u>: 1 per 10 seconds
+<u>Rate limited</u>: 1 per 10 seconds by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -295,7 +295,7 @@ One of the three
 
 <u>Description</u>: Submit a new password
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -338,7 +338,7 @@ One of the three
 
 <u>Description</u>: Logout by deleting the server-side session of this user
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 5 seconds by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -361,7 +361,7 @@ One of the three
 
 <u>Description</u>: Delete user account
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 10 seconds by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -395,7 +395,7 @@ One of the three
 <u>Description</u>: Get all transaction records of this user. If the list of transactions is up to date on the client side, it returns 200 but with different `messageCode` (see below).
 - Clicking refresh will trigger [GET /auth/getCredentials](#get-authgetcredentials), which set a flag that transactions must be fetch.
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 5 per 1 second by session ID
 
 <u>Response HTTP status code</u>
 | Status | Description |
@@ -431,7 +431,7 @@ List of:
 
 <u>Description</u>: Create a transaction
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 1 per 1 second by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -455,15 +455,20 @@ List of:
 | 401 | Unauthorized |
 | 500 | Internal error |
 
+<u>Response body</u>
+| Name | Data type | Note |
+| ---- | --------- | ---- |
+| insertedID | string | |
+
 ***
 
-#### DELETE /deleteOne
+#### DELETE /transaction/deleteOne
 
 <u>Endpoint</u>: [API host]/transaction/deleteOne
 
 <u>Description</u>: Delete a transaction
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 5 per 1 second by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -485,13 +490,13 @@ List of:
 
 ***
 
-#### DELETE /deleteMany
+#### DELETE /transaction/deleteMany
 
 <u>Endpoint</u>: [API host]/transaction/deleteMany
 
 <u>Description</u>: Delete a list of transactions
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 2 per 1 second by session ID
 
 <u>Request header</u>
 | Name | Note |
@@ -513,13 +518,13 @@ List of:
 
 ***
 
-#### PATCH /update
+#### PATCH /transaction/update
 
 <u>Endpoint</u>: [API host]/transaction/update
 
 <u>Description</u>: Update a transaction (probably should be changed to PUT)
 
-<u>Rate limited</u>: No
+<u>Rate limited</u>: 2 per 1 second by session ID
 
 <u>Request header</u>
 | Name | Note |

@@ -14,7 +14,7 @@ passwordHasher, limiter = initAppAddOns(app, sessionRedis, conf)
 
 # Finally, initialize middleware and routes
 initMiddlewares(app)
-initViews(app, sessionRedis, mongoClient, passwordHasher, limiter, conf)
+initViews(app, mongoClient, passwordHasher, limiter, conf)
 
 
 if __name__ == "__main__":

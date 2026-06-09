@@ -55,7 +55,7 @@ class transactionRepository:
 
         result = col.delete_many(
             filter = {
-                {"_id": {"$in": transactionIDs} }
+                "_id": {"$in": transactionIDs} 
             }
         )
 

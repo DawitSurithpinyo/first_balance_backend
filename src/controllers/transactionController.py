@@ -1,7 +1,8 @@
 import traceback
 from datetime import datetime, timezone
 
-from flask import jsonify, request, session
+from flask import jsonify, request, session, current_app
+from infrastructure.http.response import sendError
 from flask_classful import FlaskView, route
 from flask_limiter import Limiter, RateLimitExceeded
 from pydantic import ValidationError
@@ -59,21 +60,8 @@ class transactionController(FlaskView):
                                 transactionResponses.getAllTransactions.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
         except Exception as e:
-            print("Error on transactionController.getAllTransactions: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": transactionResponses.getAllTransactions.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
         
     @route("/add", methods=['POST'])
     def addTransaction(self):
@@ -100,21 +88,8 @@ class transactionController(FlaskView):
                                 transactionResponses.addTransaction.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
-            print("Error on transactionController.addTransaction: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": transactionResponses.addTransaction.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
 
     @route("/deleteOne", methods=['DELETE']) 
     def deleteOne(self):
@@ -140,21 +115,8 @@ class transactionController(FlaskView):
                                 transactionResponses.deleteOne.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
-            print("Error on transactionController.deleteOne: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": transactionResponses.deleteOne.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
     
     @route("/deleteMany", methods=['DELETE']) 
     def deleteMany(self):
@@ -180,21 +142,8 @@ class transactionController(FlaskView):
                                 transactionResponses.deleteMany.ERROR_RATE_LIMIT_EXCEEDED, 429)
                 
         except Exception as e:
-            print("Error on transactionController.deleteMany: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": transactionResponses.deleteMany.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500      
+            with current_app.app_context():
+                return sendError(e)
         
     @route("/update", methods=['PATCH']) 
     def update(self):
@@ -227,18 +176,5 @@ class transactionController(FlaskView):
                                 transactionResponses.update.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
-            print("Error on transactionController.update: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": transactionResponses.update.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500    
+            with current_app.app_context():
+                return sendError(e)

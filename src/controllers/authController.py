@@ -1,7 +1,8 @@
 import traceback
 from datetime import datetime, timezone
 
-from flask import after_this_request, jsonify, redirect, request, session
+from flask import after_this_request, jsonify, redirect, request, session, current_app
+from infrastructure.http.response import sendError
 from flask_classful import FlaskView, route
 from flask_limiter import Limiter, RateLimitExceeded
 from pydantic import ValidationError
@@ -62,21 +63,8 @@ class authController(FlaskView):
                                 authResponses.googleLogin.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
-            print("Error on authController.googleLogin: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.googleLogin.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
         
     @route("/getCredentials", methods=['GET'])
     def getCredentials(self):
@@ -122,21 +110,8 @@ class authController(FlaskView):
                                 authResponses.getCredentials.ERROR_RATE_LIMIT_EXCEEDED, 429)
             
         except Exception as e:
-            print("Error on authController.getCredentials: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.getCredentials.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
     
     @route("/signIn", methods=['POST'])
     def signIn(self):
@@ -169,21 +144,8 @@ class authController(FlaskView):
                                    authResponses.signIn.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
-            print("Error on authController.signIn controller: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.signIn.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
     
     @route("/signUp", methods=['POST'])
     def signUp(self):
@@ -209,22 +171,8 @@ class authController(FlaskView):
                            , authResponses.signUp.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
         except Exception as e:
-            print("Error on authController.signUp: ")
-            traceback.print_exc()
-
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.signUp.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
 
     @route("/activateAccount", methods=['POST']) 
     def activateAccount(self):
@@ -250,21 +198,8 @@ class authController(FlaskView):
                         , authResponses.activateAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
-            print("Error on authController.activateAccount: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.activateAccount.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
         
     @route("/requestForgotPassword", methods=['POST'])
     def requestForgotPassword(self):
@@ -293,21 +228,8 @@ class authController(FlaskView):
                            , authResponses.requestForgotPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
         except Exception as e:
-            print("Error on authController.requestForgotPassword: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.requestForgotPassword.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500 
+            with current_app.app_context():
+                return sendError(e)
         
     @route("/resetPassword", methods=['POST'])
     def resetPassword(self):
@@ -339,21 +261,8 @@ class authController(FlaskView):
                            , authResponses.resetPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
         except Exception as e:
-            print("Error on authController.resetPassword: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.resetPassword.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500 
+            with current_app.app_context():
+                return sendError(e)
         
     @route("/logout", methods=['POST'])
     def logout(self):
@@ -361,6 +270,11 @@ class authController(FlaskView):
             with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
                 try:
                     self.authUsecase.logout()
+                    @after_this_request
+                    def addCSRFTokenHeader(response):
+                        response.headers["X-CSRF-Token"] = session["CSRFToken"]
+                        return response
+                    
                     return jsonify({
                         "success": True,
                         "message": "Logged out.",
@@ -373,21 +287,8 @@ class authController(FlaskView):
                            , authResponses.logout.ERROR_RATE_LIMIT_EXCEEDED, 429)                
         
         except Exception as e:
-            print("Error on authController.logout: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.logout.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)
     
     @route("/deleteAccount", methods=['DELETE'])
     def deleteAccount(self):
@@ -414,18 +315,5 @@ class authController(FlaskView):
                            , authResponses.deleteAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
         except Exception as e:
-            print("Error on authController.deleteAccount: ")
-            traceback.print_exc()
-            if isinstance(e, AppError):
-                return jsonify({
-                    "success": False,
-                    "message": e.message,
-                    "messageCode": e.messageCode,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                }), e.statusCode
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": authResponses.deleteAccount.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
+            with current_app.app_context():
+                return sendError(e)

@@ -160,15 +160,15 @@ def initMiddlewares(app: Flask) -> None:
             }), 500
 
 
-def initViews(app: Flask, sessionRedis: Redis, mongoClient: MongoClient, 
+def initViews(app: Flask, mongoClient: MongoClient, 
               passwordHasher: PasswordHasher, limiter: Limiter, 
               conf: DevConfig | StagingConfig | ProdConfig) -> None:
     try:
-        userRepo = userRepository(mongo=mongoClient, redisSession=sessionRedis)
+        userRepo = userRepository(mongo=mongoClient)
         transacRepo = transactionRepository(mongo=mongoClient)
 
-        authUsecases = authUsecase(userRepo=userRepo, transactionRepo= transacRepo, flaskApp=app, 
-                                   redisSession=sessionRedis, pwHasher=passwordHasher, conf=conf)
+        authUsecases = authUsecase(userRepo=userRepo, transactionRepo=transacRepo, 
+                                   pwHasher=passwordHasher, conf=conf)
         transacUsecases = transactionUsecase(transactionRepo=transacRepo)
         
         URL_PREFIX: str = '/api'

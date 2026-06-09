@@ -1,18 +1,14 @@
 from pymongo import MongoClient, ReturnDocument
-from redis import Redis
 import traceback
 
 
 class userRepository:
-    def __init__(self, mongo: MongoClient, redisSession: Redis):
+    def __init__(self, mongo: MongoClient):
         try:
             if mongo is None or not isinstance(mongo, MongoClient):
                 raise Exception("mongo is not provided, or not of correct type")
-            if redisSession is None or not isinstance(redisSession, Redis):
-                raise Exception("redisSession is not provided, or not of correct type")
             
             self.mongoClient = mongo
-            self.sessionRedis = redisSession
 
         except Exception as e:
             print(f"Error while constructing userRepository(): {e}")

@@ -14,8 +14,12 @@ def authMiddleware():
             raise AppError("API route not found.",
                            authResponses.middleware.ERROR_ROUTE_NOT_FOUND, 404)
         
+        if request.method == 'OPTIONS':
+            # No check on OPTIONS probe
+            return
+        
         if request.endpoint in whiteList:
-            # Automatically go to destination route if it's in whiteList
+            # No check on whitelisted endpoints
             return
         
         sessionType = checkSessionType(dict(session))

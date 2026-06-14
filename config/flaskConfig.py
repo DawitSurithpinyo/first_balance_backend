@@ -14,7 +14,7 @@ class ENV(object):
 class BaseConfig(object):
     DEBUG = False
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = "Strict"
+    SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_PATH = "/"
         
 

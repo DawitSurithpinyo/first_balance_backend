@@ -12,6 +12,9 @@ compose-down:
 run:
 	python run.py
 
+run-gu:
+	gunicorn -b 0.0.0.0:5000 run:app
+
 run-redis:
 	docker exec -it $$(docker ps -aqf "name=fb_redis") redis-cli --user Punn --askpass
 

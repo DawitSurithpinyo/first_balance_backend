@@ -1,0 +1,6 @@
+FROM redis:alpine3.22
+
+# Official Redis image already uses a default redis user
+COPY config/redis.conf /usr/local/etc/redis/redis.conf
+
+CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]

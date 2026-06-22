@@ -1,9 +1,8 @@
 import traceback
-from datetime import datetime, timezone
 
 from argon2 import PasswordHasher
 from config.flaskConfig import *
-from flask import Flask, jsonify
+from flask import Flask
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_session import Session
@@ -14,7 +13,6 @@ from src.controllers.transactionController import transactionController
 from src.middleware import authMiddleware, requestID
 from src.repositories.transactionRepo import transactionRepository
 from src.repositories.userRepo import userRepository
-from src.types.enums.responseCodes.setup import appSetupResponses
 from src.usecases.authUsecase import authUsecase
 from src.usecases.transactionUsecase import transactionUsecase
 
@@ -38,7 +36,6 @@ def getConf() -> DevConfig | StagingConfig | ProdConfig:
     except Exception as e:
         print(f"Error while trying to get ENV env variable: {e}")
         traceback.print_exc()
-        print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
 
 
 def createApp(config: DevConfig | StagingConfig | ProdConfig) -> Flask:
@@ -53,13 +50,6 @@ def createApp(config: DevConfig | StagingConfig | ProdConfig) -> Flask:
     except Exception:
         print("Error while setting up server configs: ")
         traceback.print_exc()
-        with app.app_context():
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
 
 
 def initInfra(config: DevConfig | StagingConfig | ProdConfig) -> tuple[Redis, MongoClient]:
@@ -82,8 +72,6 @@ def initInfra(config: DevConfig | StagingConfig | ProdConfig) -> tuple[Redis, Mo
     except Exception:
         print("Error while setting up MongoDB and Redis for Session: ")
         traceback.print_exc()
-        print(f"Message code: {appSetupResponses.INTERNAL_SERVER_ERROR}")
-        print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
 
     return sessionRedis, mongoClient
 
@@ -130,13 +118,6 @@ def initAppAddOns(app: Flask, sessionRedis: Redis, config: DevConfig | StagingCo
     except Exception:
         print("Error while setting up app Session and CORS: ")
         traceback.print_exc()
-        with app.app_context():
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
 
 
 def initMiddlewares(app: Flask) -> None:
@@ -151,13 +132,6 @@ def initMiddlewares(app: Flask) -> None:
     except Exception:
         print("Error while setting up auth middleware: ")
         traceback.print_exc()
-        with app.app_context():
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500
 
 
 def initViews(app: Flask, mongoClient: MongoClient, 
@@ -178,10 +152,3 @@ def initViews(app: Flask, mongoClient: MongoClient,
     except Exception:
         print("Error while setting up Flask views (API routes): ")
         traceback.print_exc()
-        with app.app_context():
-            return jsonify({
-                "success": False,
-                "message": "Internal server error",
-                "messageCode": appSetupResponses.INTERNAL_SERVER_ERROR,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }), 500

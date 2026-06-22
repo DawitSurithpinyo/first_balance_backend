@@ -2,7 +2,7 @@ import os
 
 from flask_limiter.util import get_remote_address
 from redis.retry import Retry
-from redis.exceptions import (TimeoutError, ConnectionError)
+from redis.exceptions import TimeoutError, ConnectionError
 from redis.backoff import ExponentialBackoff
 from datetime import timedelta
 
@@ -12,79 +12,176 @@ class ENV(object):
     PROD = "PROD"
 
 class BaseConfig(object):
-    DEBUG = False
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_PATH = "/"
-        
+    def __init__(self):
+        self.DEBUG = False
+
+        self.SESSION_COOKIE_HTTPONLY = True
+        self.SESSION_COOKIE_SAMESITE = "Lax"
+        self.SESSION_COOKIE_PATH = "/"
+
 
 class DevConfig(BaseConfig):
-    DEBUG = True
-    SECRET_KEY = os.getenv("DEV_FLASK_SECRET_KEY")
+    def __init__(self):
+        super().__init__()
 
-    # Below are other custom configs that are not for the Flask app itself
+        # Flask configs
+        self.DEBUG = True
+        self.SECRET_KEY = os.getenv("DEV_FLASK_SECRET_KEY")
 
-    SESSION_TYPE = "redis"
-    SESSION_COOKIE_NAME = "First_balance"
-    SESSION_COOKIE_SECURE = False
-    SESSION_LIFETIME = timedelta(days=7)
-    SESSION_ID_LENGTH = 128
+        # Session configs
+        self.SESSION_TYPE = "redis"
+        self.SESSION_COOKIE_NAME = "First_balance"
+        self.SESSION_COOKIE_SECURE = False
+        self.SESSION_LIFETIME = timedelta(days=7)
+        self.SESSION_ID_LENGTH = 128
 
-    PORT = 5000
-    FRONT_END_URL = 'http://localhost:5173'
-    CORS_CONFIGS = {
-        "origins": [FRONT_END_URL],
-        "supports_credentials": True,
-        "expose_headers": ["X-CSRF-Token", "X-Request-ID"],
-        "allow_headers": ["X-CSRF-Token", "Origin", "Content-Type", "Accept", "Authorization"]
-    }
+        # App configs
+        self.PORT = 5000
+        self.FRONT_END_URL = "http://localhost:5173"
+        self.FRONT_END_BUILD_URL = "http://localhost:4173"
 
-    MONGO_CONFIGS = {
-        "host": os.getenv('DEV_DATABASE_URL'),
-        "tz_aware": True
-    }
-
-    REDIS_HOST = os.getenv('DEV_REDIS_HOST')
-    REDIS_USER = os.getenv('DEV_REDIS_USER')
-    REDIS_PASS = os.getenv('DEV_REDIS_PASS')
-    REDIS_PORT = os.getenv('DEV_REDIS_PORT')
-    REDIS_HEALTH_CHECK_INTERVAL = 25
-    REDIS_RETRY = Retry(ExponentialBackoff(cap=10, base=1), retries=25)
-    REDIS_RETRY_ON_ERROR = [ConnectionError, TimeoutError]
-    REDIS_SOCKET_KEEPALIVE = True
-
-    SESSION_REDIS_CONFIGS = {
-        "host": REDIS_HOST,
-        "username": REDIS_USER,
-        "password": REDIS_PASS,
-        "port": REDIS_PORT,
-        "db": 0,
-        "health_check_interval": REDIS_HEALTH_CHECK_INTERVAL,
-        "retry": REDIS_RETRY,
-        "retry_on_error": REDIS_RETRY_ON_ERROR,
-        "socket_keepalive": REDIS_SOCKET_KEEPALIVE
-    }
-
-    LIMITER_CONFIGS = {
-        "key_func": get_remote_address,
-        "default_limits": ['10 per second'], # individually apply to all routes
-        "application_limits": ['1000 per day'], # shared limit across all routes
-        "meta_limits": ['5 per day'], # how many times client can hit any defined limits
-        "headers_enabled": True,
-        "storage_uri": f"redis://{REDIS_USER}:{REDIS_PASS}@{REDIS_HOST}:{REDIS_PORT}/1",
-        "storage_options": {
-            "db": 1,
-            "health_check_interval": REDIS_HEALTH_CHECK_INTERVAL,
-            "retry": REDIS_RETRY,
-            "retry_on_error": REDIS_RETRY_ON_ERROR,
-            "socket_keepalive": REDIS_SOCKET_KEEPALIVE
+        # CORS
+        self.CORS_CONFIGS = {
+            "origins": [self.FRONT_END_URL, self.FRONT_END_BUILD_URL],
+            "supports_credentials": True,
+            "expose_headers": ["X-CSRF-Token", "X-Request-ID"],
+            "allow_headers": ["X-CSRF-Token", "Origin", "Content-Type", "Accept", "Authorization"],
         }
-    }
+
+        # Mongo
+        self.MONGO_CONFIGS = {
+            "host": os.getenv("DEV_DATABASE_URL"),
+            "tz_aware": True,
+        }
+
+        # Redis base configs
+        self.REDIS_HOST = os.getenv("DEV_REDIS_HOST")
+        self.REDIS_USER = os.getenv("DEV_REDIS_USER")
+        self.REDIS_PASS = os.getenv("DEV_REDIS_PASS")
+
+        redis_port = os.getenv("DEV_REDIS_PORT")
+        self.REDIS_PORT = int(redis_port) if redis_port else None
+
+        self.REDIS_HEALTH_CHECK_INTERVAL = 25
+        self.REDIS_RETRY = Retry(ExponentialBackoff(cap=10, base=1), retries=25)
+        self.REDIS_RETRY_ON_ERROR = [ConnectionError, TimeoutError]
+        self.REDIS_SOCKET_KEEPALIVE = True
+
+        # Flask-Session Redis
+        self.SESSION_REDIS_CONFIGS = {
+            "host": self.REDIS_HOST,
+            "username": self.REDIS_USER,
+            "password": self.REDIS_PASS,
+            "port": self.REDIS_PORT,
+            "db": 0,
+            "health_check_interval": self.REDIS_HEALTH_CHECK_INTERVAL,
+            "retry": self.REDIS_RETRY,
+            "retry_on_error": self.REDIS_RETRY_ON_ERROR,
+            "socket_keepalive": self.REDIS_SOCKET_KEEPALIVE,
+        }
+
+        # Flask-Limiter
+        self.LIMITER_CONFIGS = {
+            "key_func": get_remote_address,
+            "default_limits": ["10 per second"],
+            "application_limits": ["1000 per day"],
+            "meta_limits": ["5 per day"],
+            "headers_enabled": True,
+            "storage_uri": (
+                f"redis://{self.REDIS_USER}:{self.REDIS_PASS}"
+                f"@{self.REDIS_HOST}:{self.REDIS_PORT}/1"
+            ),
+            "storage_options": {
+                "db": 1,
+                "health_check_interval": self.REDIS_HEALTH_CHECK_INTERVAL,
+                "retry": self.REDIS_RETRY,
+                "retry_on_error": self.REDIS_RETRY_ON_ERROR,
+                "socket_keepalive": self.REDIS_SOCKET_KEEPALIVE,
+            },
+        }
 
 class StagingConfig(BaseConfig):
-    PORT = 5000
-    FRONT_END_URL = 'https://firstbalance.net'
+    def __init__(self):
+        super().__init__()
+
+        self.PORT = 5000
+        self.FRONT_END_URL = 'https://firstbalance.net'
 
 class ProdConfig(BaseConfig):
-    PORT = 5000
-    FRONT_END_URL = 'https://firstbalance.net'
+    def __init__(self):
+        super().__init__()
+
+        # Flask configs
+        self.DEBUG = False
+        self.SECRET_KEY = os.getenv("PROD_FLASK_SECRET_KEY")
+
+        # Session configs
+        self.SESSION_TYPE = "redis"
+        self.SESSION_COOKIE_NAME = "First_balance"
+        self.SESSION_COOKIE_SECURE = True
+        self.SESSION_LIFETIME = timedelta(days=7)
+        self.SESSION_ID_LENGTH = 128
+
+        # App configs
+        self.PORT = 5000
+        self.FRONT_END_URL = 'https://firstbalance.net'
+
+        # CORS
+        self.CORS_CONFIGS = {
+            "origins": [self.FRONT_END_URL],
+            "supports_credentials": True,
+            "expose_headers": ["X-CSRF-Token", "X-Request-ID"],
+            "allow_headers": ["X-CSRF-Token", "Origin", "Content-Type", "Accept", "Authorization"],
+        }
+
+        # Mongo
+        self.MONGO_CONFIGS = {
+            "host": os.getenv("PROD_DATABASE_URL"),
+            "tz_aware": True,
+        }
+
+        # Redis base configs
+        self.REDIS_HOST = os.getenv("PROD_REDIS_HOST")
+        self.REDIS_USER = os.getenv("PROD_REDIS_USER")
+        self.REDIS_PASS = os.getenv("PROD_REDIS_PASS")
+
+        redis_port = os.getenv("PROD_REDIS_PORT")
+        self.REDIS_PORT = int(redis_port) if redis_port else None
+
+        self.REDIS_HEALTH_CHECK_INTERVAL = 25
+        self.REDIS_RETRY = Retry(ExponentialBackoff(cap=10, base=1), retries=25)
+        self.REDIS_RETRY_ON_ERROR = [ConnectionError, TimeoutError]
+        self.REDIS_SOCKET_KEEPALIVE = True
+
+        # Flask-Session Redis
+        self.SESSION_REDIS_CONFIGS = {
+            "host": self.REDIS_HOST,
+            "username": self.REDIS_USER,
+            "password": self.REDIS_PASS,
+            "port": self.REDIS_PORT,
+            "db": 0,
+            "health_check_interval": self.REDIS_HEALTH_CHECK_INTERVAL,
+            "retry": self.REDIS_RETRY,
+            "retry_on_error": self.REDIS_RETRY_ON_ERROR,
+            "socket_keepalive": self.REDIS_SOCKET_KEEPALIVE,
+        }
+
+        # Flask-Limiter
+        self.LIMITER_CONFIGS = {
+            "key_func": get_remote_address,
+            "default_limits": ["10 per second"],
+            "application_limits": ["1000 per day"],
+            "meta_limits": ["5 per day"],
+            "headers_enabled": True,
+            "storage_uri": (
+                f"redis://{self.REDIS_USER}:{self.REDIS_PASS}"
+                f"@{self.REDIS_HOST}:{self.REDIS_PORT}/1"
+            ),
+            "storage_options": {
+                "db": 1,
+                "health_check_interval": self.REDIS_HEALTH_CHECK_INTERVAL,
+                "retry": self.REDIS_RETRY,
+                "retry_on_error": self.REDIS_RETRY_ON_ERROR,
+                "socket_keepalive": self.REDIS_SOCKET_KEEPALIVE,
+            },
+        }

@@ -12,7 +12,9 @@ legacy/
 Makefile
 app.py
 .git
+.github/
 .gitignore
 README.md
 .vscode
 redis.dev.conf
+bandit.yaml

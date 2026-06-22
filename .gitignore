@@ -20,3 +20,5 @@ legacy/
 
 # MongoDB Atlas admin API service account token
 token.txt
+
+bandit_scan.json

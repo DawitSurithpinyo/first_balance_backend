@@ -21,6 +21,9 @@ run-redis:
 redis-dev:
 	docker exec -it $$(docker ps -aqf "name=fb_redis_dev") redis-cli --user Punn --askpass
 
+bandit:
+	bandit -r ./ -c ./bandit.yaml -f json -o bandit_scan.json
+
 # curl will parse --user to "Authorization: Basic <token>" header
 mongo-admin-get-token:
 	@curl --request POST \

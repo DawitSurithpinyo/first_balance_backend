@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  test:
+  scan:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
@@ -18,11 +18,11 @@ jobs:
         uses: PyCQA/bandit-action@v1
 
 
-  build:
+  test_build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: test
+    needs: scan
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -39,16 +39,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push back end
+      - name: Test build back end
         uses: docker/build-push-action@v7
         with:
           file: Dockerfile.back
-          push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/back:latest
+          push: false
 
-      - name: Build and push Redis
+      - name: Test build Redis
         uses: docker/build-push-action@v7
         with:
           file: Dockerfile.redis
-          push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/redis:latest 
+          push: false

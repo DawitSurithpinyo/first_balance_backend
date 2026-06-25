@@ -67,7 +67,7 @@ jobs:
         with:
           file: Dockerfile.back
           push: true
-          tags: 
+          tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/back:${{ env.NEW_VERSION }}
             ${{ vars.DOCKERHUB_USERNAME }}/back:latest
 

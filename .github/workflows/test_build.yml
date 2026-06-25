@@ -1,0 +1,52 @@
+name: test and build
+
+on: 
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        
+      - name: Bandit scan
+        uses: PyCQA/bandit-action@v1
+
+
+  test_build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: scan
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: authenticate to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Test build back end
+        uses: docker/build-push-action@v7
+        with:
+          file: Dockerfile.back
+          push: false
+
+      - name: Test build Redis
+        uses: docker/build-push-action@v7
+        with:
+          file: Dockerfile.redis
+          push: false

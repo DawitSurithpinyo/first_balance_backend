@@ -67,6 +67,7 @@ jobs:
         with:
           file: Dockerfile.back
           push: true
+          platforms: linux/amd64,linux/arm64 
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/back:${{ env.NEW_VERSION }}
             ${{ vars.DOCKERHUB_USERNAME }}/back:latest
@@ -76,6 +77,7 @@ jobs:
         with:
           file: Dockerfile.redis
           push: true
+          platforms: linux/amd64,linux/arm64 
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/redis:${{ env.NEW_VERSION }}
             ${{ vars.DOCKERHUB_USERNAME }}/redis:latest
@@ -85,8 +87,39 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      ENV: ${{ secrets.ENV }}
+      PROD_CLIENT_SECRETS_FILE: ${{ secrets.PROD_CLIENT_SECRETS_FILE }}
+      PROD_CLIENT_ID: ${{ secrets.PROD_CLIENT_ID }}
+      PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      PROD_REDIS_HOST: ${{ secrets.PROD_REDIS_HOST }}
+      PROD_REDIS_USER: ${{ secrets.PROD_REDIS_USER }}
+      PROD_REDIS_PASS: ${{ secrets.PROD_REDIS_PASS }}
+      PROD_REDIS_PORT: ${{ secrets.PROD_REDIS_PORT }}
+      PROD_FLASK_SECRET_KEY: ${{ secrets.PROD_FLASK_SECRET_KEY }}
     steps:
-      - run: 
-          echo "SSH into EC2 instance"
-          echo "SCP repository secrets to .env"
-          echo "Restart Docker compose"
+      - name: SSH and restart with latest image
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: ENV,PROD_CLIENT_SECRETS_FILE,PROD_CLIENT_ID,PROD_DATABASE_URL,PROD_REDIS_HOST,PROD_REDIS_USER,PROD_REDIS_PASS,PROD_REDIS_PORT,PROD_FLASK_SECRET_KEY
+          script: |
+            cat <<EOF > ~/app/.env
+            ENV=$ENV
+            PROD_CLIENT_SECRETS_FILE=$PROD_CLIENT_SECRETS_FILE
+            PROD_CLIENT_ID=$PROD_CLIENT_ID
+            PROD_DATABASE_URL=$PROD_DATABASE_URL
+            PROD_REDIS_HOST=$PROD_REDIS_HOST
+            PROD_REDIS_USER=$PROD_REDIS_USER
+            PROD_REDIS_PASS=$PROD_REDIS_PASS
+            PROD_REDIS_PORT=$PROD_REDIS_PORT
+            PROD_FLASK_SECRET_KEY=$PROD_FLASK_SECRET_KEY
+            EOF
+
+            cd ~/app
+            docker compose pull redis
+            docker compose up -d redis
+            docker compose pull back
+            docker compose up -d back

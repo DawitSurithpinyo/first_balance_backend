@@ -12,39 +12,16 @@ on:
       - unlabeled
 
 jobs:
-  validate_label:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-
-      - name: check and validate PR label
-        run: |
-          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
-
-          COUNT=0
-
-          if [[ "$LABELS" =~ (^| )major($| ) ]]; then
-            COUNT=$((COUNT + 1))
-          elif [[ "$LABELS" =~ (^| )minor($| ) ]]; then
-            COUNT=$((COUNT + 1))
-          elif [[ "$LABELS" =~ (^| )patch($| ) ]]; then
-            COUNT=$((COUNT + 1))
-          fi
-
-          if [ "$COUNT" -ne 1 ]; then
-            echo "PR must have exactly one of: major, minor, patch"
-            exit 1
-          fi
+  validate_labels:
+    uses: ./.github/workflows/validate_labels.yml
 
 
   scan:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
-    needs: validate_label
+    needs: validate_labels
+    if: needs.validate_labels.outputs.RELEASE_LABEL != 'skip'
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -57,7 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: scan
+    needs: validate_labels
+    if: needs.validate_labels.outputs.RELEASE_LABEL != 'skip'
     steps:
       - name: checkout
         uses: actions/checkout@v4

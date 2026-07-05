@@ -8,20 +8,13 @@ on:
       [closed]
 
 jobs:
-  validate_labels:
-    uses: ./.github/workflows/validate_labels.yml
-
-
   build_and_release:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    needs: validate_labels
     env:
-      RELEASE_LABEL: ${{ needs.validate_labels.outputs.RELEASE_LABEL }}
-    if: >
-      github.event.pull_request.merged == true && 
-      needs.validate_labels.outputs.RELEASE_LABEL != 'skip'
+      LABEL: ${{ github.event.pull_request.labels[0].name }}
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -48,17 +41,17 @@ jobs:
 
           IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION#v}"
 
-          if [ "$RELEASE_LABEL" == "major" ]; then
+          if [ "$LABEL" == "major" ]; then
             MAJOR=$((MAJOR + 1))
             MINOR=0
             PATCH=0
-          elif [ "$RELEASE_LABEL" == "minor" ]; then
+          elif [ "$LABEL" == "minor" ]; then
             MINOR=$((MINOR + 1))
             PATCH=0
-          elif [ "$RELEASE_LABEL" == "patch" ]; then
+          elif [ "$LABEL" == "patch" ]; then
             PATCH=$((PATCH + 1))
           else
-            echo "Invalid label: $RELEASE_LABEL"
+            echo "Invalid label: $LABEL"
             exit 1
           fi
 

@@ -2,6 +2,8 @@ name: release and deploy
 
 on:
   pull_request:
+    paths-ignore:
+      - '**.md'
     branches: 
       main
     types: 

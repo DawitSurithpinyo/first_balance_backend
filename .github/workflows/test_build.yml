@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: scan
+    needs: validate_label
     steps:
       - name: checkout
         uses: actions/checkout@v4

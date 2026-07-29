@@ -67,22 +67,12 @@ jobs:
       - name: Build and push back end
         uses: docker/build-push-action@v7
         with:
-          file: Dockerfile.back
+          file: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64 
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/back:${{ env.NEW_VERSION }}
             ${{ vars.DOCKERHUB_USERNAME }}/back:latest
-
-      - name: Build and push redis
-        uses: docker/build-push-action@v7
-        with:
-          file: Dockerfile.redis
-          push: true
-          platforms: linux/amd64,linux/arm64 
-          tags: |
-            ${{ vars.DOCKERHUB_USERNAME }}/redis:${{ env.NEW_VERSION }}
-            ${{ vars.DOCKERHUB_USERNAME }}/redis:latest
 
   deploy:
     needs: build_and_release
@@ -121,7 +111,5 @@ jobs:
             EOF
 
             cd ~/app
-            docker compose pull redis
-            docker compose up -d redis
             docker compose pull back
             docker compose up -d back

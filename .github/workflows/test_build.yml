@@ -2,6 +2,8 @@ name: test and build
 
 on: 
   pull_request:
+    paths-ignore:
+      - '**.md'
     branches:
       - main
     types:
@@ -12,16 +14,39 @@ on:
       - unlabeled
 
 jobs:
-  validate_labels:
-    uses: ./.github/workflows/validate_labels.yml
+  validate_label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: check and validate PR label
+        run: |
+          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+
+          COUNT=0
+
+          if [[ "$LABELS" =~ (^| )major($| ) ]]; then
+            COUNT=$((COUNT + 1))
+          elif [[ "$LABELS" =~ (^| )minor($| ) ]]; then
+            COUNT=$((COUNT + 1))
+          elif [[ "$LABELS" =~ (^| )patch($| ) ]]; then
+            COUNT=$((COUNT + 1))
+          fi
+
+          if [ "$COUNT" -ne 1 ]; then
+            echo "PR must have exactly one of: major, minor, patch"
+            exit 1
+          fi
 
 
   scan:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
-    needs: validate_labels
-    if: needs.validate_labels.outputs.RELEASE_LABEL != 'skip'
+    needs: validate_label
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -34,8 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: validate_labels
-    if: needs.validate_labels.outputs.RELEASE_LABEL != 'skip'
+    needs: validate_label
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -52,16 +76,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Test build back end
+      - name: Test build
         uses: docker/build-push-action@v7
         with:
           platforms: linux/amd64,linux/arm64 
-          file: Dockerfile.back
-          push: false
-
-      - name: Test build Redis
-        uses: docker/build-push-action@v7
-        with:
-          platforms: linux/amd64,linux/arm64 
-          file: Dockerfile.redis
+          file: Dockerfile
           push: false

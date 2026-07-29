@@ -6,12 +6,9 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
-      - ./config/redis.conf:/usr/local/etc/redis/redis.conf
-      # <left>:<right> => <left> is actual path to resource in host computer, and must be accessible by Docker
-      # <right> is where the resource appear inside the container
-      # The command above read from inside the container, so it must be the <right> directory
+      - fb_standalone_redis_data:/data
+      - ../ops/development/config/redis.dev.conf:/usr/local/etc/redis/redis.conf
     restart: unless-stopped
 
 volumes:
-  redis_data:
+  fb_standalone_redis_data:

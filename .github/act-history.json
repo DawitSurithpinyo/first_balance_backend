@@ -1,5 +1,11 @@
 [
   {
+    "workflow": "security-scan",
+    "command": "act security-scan -j security-scan",
+    "success": true,
+    "timestamp": "2026-10-23T17:58:09.894Z"
+  },
+  {
     "workflow": "test_action.yml",
     "command": "act pull_request -W .github/workflows/test_action.yml",
     "success": true,

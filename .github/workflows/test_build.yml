@@ -42,18 +42,32 @@ jobs:
           fi
 
 
-  scan:
+  security-scan:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
+      actions: read
+      contents: read
     needs: validate_label
     steps:
       - name: checkout
         uses: actions/checkout@v4
         
-      - name: Bandit scan
-        uses: PyCQA/bandit-action@v1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          queries: security-extended
 
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"
+
+      - name: pip-audit dependency scan
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: requirements.txt
 
   test_build:
     runs-on: ubuntu-latest

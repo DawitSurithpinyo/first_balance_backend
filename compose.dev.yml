@@ -1,6 +1,6 @@
 services:
   redis:
-    image: redis:alpine3.22
+    image: redis:alpine3.23
     container_name: fb_redis_dev
     command: redis-server /usr/local/etc/redis/redis.conf
     ports:

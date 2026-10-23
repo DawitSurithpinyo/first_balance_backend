@@ -42,7 +42,7 @@ jobs:
           fi
 
 
-  scan:
+  security-scan:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
@@ -51,9 +51,13 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
         
-      - name: Bandit scan
+      - name: Bandit code scan
         uses: PyCQA/bandit-action@v1
 
+      - name: pip-audit dependency scan
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: requirements.txt
 
   test_build:
     runs-on: ubuntu-latest

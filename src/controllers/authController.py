@@ -113,156 +113,156 @@ class authController(FlaskView):
             with current_app.app_context():
                 return sendError(e)
     
-    @route("/signIn", methods=['POST'])
-    def signIn(self):
-        # What the hell is this. But I mean there is no other way to do it
-        try: # any Exceptions
-            with self.limiter.limit('10 per minute', key_func=lambda: session.sid):
-                try: # limiter exception
-                    try: # Pydantic exception
-                        data = manualSignInRequest( **request.get_json() )
-                    except ValidationError as e:
-                        raise AppError('Invalid request body', 
-                                    authResponses.signIn.ERROR_INVALID_REQUEST_BODY, 400)
+    # @route("/signIn", methods=['POST'])
+    # def signIn(self):
+    #     # What the hell is this. But I mean there is no other way to do it
+    #     try: # any Exceptions
+    #         with self.limiter.limit('10 per minute', key_func=lambda: session.sid):
+    #             try: # limiter exception
+    #                 try: # Pydantic exception
+    #                     data = manualSignInRequest( **request.get_json() )
+    #                 except ValidationError as e:
+    #                     raise AppError('Invalid request body', 
+    #                                 authResponses.signIn.ERROR_INVALID_REQUEST_BODY, 400)
 
-                    result: normalUser = self.authUsecase.signIn(data=data)
-                    @after_this_request
-                    def addCSRFTokenHeader(response):
-                        response.headers["X-CSRF-Token"] = session["CSRFToken"]
-                        return response
+    #                 result: normalUser = self.authUsecase.signIn(data=data)
+    #                 @after_this_request
+    #                 def addCSRFTokenHeader(response):
+    #                     response.headers["X-CSRF-Token"] = session["CSRFToken"]
+    #                     return response
                     
-                    return jsonify({
-                        "success": True,
-                        "message": "Signed in.",
-                        "messageCode": authResponses.signIn.SUCCESS,
-                        "data": result.model_dump(exclude_none=True),
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }), 201
+    #                 return jsonify({
+    #                     "success": True,
+    #                     "message": "Signed in.",
+    #                     "messageCode": authResponses.signIn.SUCCESS,
+    #                     "data": result.model_dump(exclude_none=True),
+    #                     "timestamp": datetime.now(timezone.utc).isoformat()
+    #                 }), 201
                 
-                except RateLimitExceeded as e:
-                    raise AppError('Route rate limit exceeded',
-                                   authResponses.signIn.ERROR_RATE_LIMIT_EXCEEDED, 429)
+    #             except RateLimitExceeded as e:
+    #                 raise AppError('Route rate limit exceeded',
+    #                                authResponses.signIn.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
-        except Exception as e:
-            with current_app.app_context():
-                return sendError(e)
+    #     except Exception as e:
+    #         with current_app.app_context():
+    #             return sendError(e)
     
-    @route("/signUp", methods=['POST'])
-    def signUp(self):
-        try: # any Exceptions
-            with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
-                try: # limiter exception
-                    try:
-                        data = manualSignUpRequest( **request.get_json() )
-                    except ValidationError as e:
-                        raise AppError('Invalid request body',
-                                    authResponses.signUp.ERROR_INVALID_REQUEST_BODY, 400)
+    # @route("/signUp", methods=['POST'])
+    # def signUp(self):
+    #     try: # any Exceptions
+    #         with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
+    #             try: # limiter exception
+    #                 try:
+    #                     data = manualSignUpRequest( **request.get_json() )
+    #                 except ValidationError as e:
+    #                     raise AppError('Invalid request body',
+    #                                 authResponses.signUp.ERROR_INVALID_REQUEST_BODY, 400)
                     
-                    self.authUsecase.signUp(data=data)
-                    return jsonify({
-                        "success": True,
-                        "message": "Signed up with an activation email sent to client.",
-                        "messageCode": authResponses.signUp.SUCCESS,
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }), 201
+    #                 self.authUsecase.signUp(data=data)
+    #                 return jsonify({
+    #                     "success": True,
+    #                     "message": "Signed up with an activation email sent to client.",
+    #                     "messageCode": authResponses.signUp.SUCCESS,
+    #                     "timestamp": datetime.now(timezone.utc).isoformat()
+    #                 }), 201
                 
-                except RateLimitExceeded as e:
-                    raise AppError('Rate limit exceeded'
-                           , authResponses.signUp.ERROR_RATE_LIMIT_EXCEEDED, 429)
+    #             except RateLimitExceeded as e:
+    #                 raise AppError('Rate limit exceeded'
+    #                        , authResponses.signUp.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
-        except Exception as e:
-            with current_app.app_context():
-                return sendError(e)
+    #     except Exception as e:
+    #         with current_app.app_context():
+    #             return sendError(e)
 
-    @route("/activateAccount", methods=['POST']) 
-    def activateAccount(self):
-        try:
-            with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
-                try:
-                    token = request.args.get('token', default=None, type=str)
-                    if token is None:
-                        raise AppError('Expect "token" parameter on URL query string.',
-                                    authResponses.activateAccount.ERROR_INVALID_QUERY_STRING, 400)
+    # @route("/activateAccount", methods=['POST']) 
+    # def activateAccount(self):
+    #     try:
+    #         with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
+    #             try:
+    #                 token = request.args.get('token', default=None, type=str)
+    #                 if token is None:
+    #                     raise AppError('Expect "token" parameter on URL query string.',
+    #                                 authResponses.activateAccount.ERROR_INVALID_QUERY_STRING, 400)
                     
-                    result: normalUser = self.authUsecase.activateAccount(token=token)
-                    return jsonify({
-                        "success": True,
-                        "message": "Account activated.",
-                        "messageCode": authResponses.activateAccount.SUCCESS,
-                        "data": result.model_dump(exclude_none=True),
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }), 201
+    #                 result: normalUser = self.authUsecase.activateAccount(token=token)
+    #                 return jsonify({
+    #                     "success": True,
+    #                     "message": "Account activated.",
+    #                     "messageCode": authResponses.activateAccount.SUCCESS,
+    #                     "data": result.model_dump(exclude_none=True),
+    #                     "timestamp": datetime.now(timezone.utc).isoformat()
+    #                 }), 201
                 
-                except RateLimitExceeded as e:
-                    raise AppError('Rate limit exceeded'
-                        , authResponses.activateAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
+    #             except RateLimitExceeded as e:
+    #                 raise AppError('Rate limit exceeded'
+    #                     , authResponses.activateAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
-        except Exception as e:
-            with current_app.app_context():
-                return sendError(e)
+    #     except Exception as e:
+    #         with current_app.app_context():
+    #             return sendError(e)
         
-    @route("/requestForgotPassword", methods=['POST'])
-    def requestForgotPassword(self):
-        try: # any Exceptions
-            with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
-                try: # limiter exception
-                    try:
-                        data = forgotPasswordRequest( **request.get_json() )
-                    except ValidationError as e:
-                        raise AppError("Invalid request body",
-                                    authResponses.requestForgotPassword.ERROR_INVALID_REQUEST_BODY, 400)
+    # @route("/requestForgotPassword", methods=['POST'])
+    # def requestForgotPassword(self):
+    #     try: # any Exceptions
+    #         with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
+    #             try: # limiter exception
+    #                 try:
+    #                     data = forgotPasswordRequest( **request.get_json() )
+    #                 except ValidationError as e:
+    #                     raise AppError("Invalid request body",
+    #                                 authResponses.requestForgotPassword.ERROR_INVALID_REQUEST_BODY, 400)
                     
-                    # WHY do I need to return token to the client when an email is sent to them??
-                    # Wtf was I thinking????
-                    token: str = self.authUsecase.requestForgotPassword(data=data)
-                    return jsonify({
-                        "success": True,
-                        "message": "Request to reset password activated with the following token.",
-                        "messageCode": authResponses.requestForgotPassword.SUCCESS,
-                        "data": token,
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }), 201
+    #                 # WHY do I need to return token to the client when an email is sent to them??
+    #                 # Wtf was I thinking????
+    #                 token: str = self.authUsecase.requestForgotPassword(data=data)
+    #                 return jsonify({
+    #                     "success": True,
+    #                     "message": "Request to reset password activated with the following token.",
+    #                     "messageCode": authResponses.requestForgotPassword.SUCCESS,
+    #                     "data": token,
+    #                     "timestamp": datetime.now(timezone.utc).isoformat()
+    #                 }), 201
                 
-                except RateLimitExceeded as e:
-                    raise AppError('Rate limit exceeded'
-                           , authResponses.requestForgotPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
+    #             except RateLimitExceeded as e:
+    #                 raise AppError('Rate limit exceeded'
+    #                        , authResponses.requestForgotPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
         
-        except Exception as e:
-            with current_app.app_context():
-                return sendError(e)
+    #     except Exception as e:
+    #         with current_app.app_context():
+    #             return sendError(e)
         
-    @route("/resetPassword", methods=['POST'])
-    def resetPassword(self):
-        try:
-            with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
-                try:
-                    try:
-                        data = resetPasswordRequest( **request.get_json() )
-                    except ValidationError as e:
-                        raise AppError("Invalid request body",
-                                    authResponses.resetPassword.ERROR_INVALID_REQUEST_BODY, 400)
+    # @route("/resetPassword", methods=['POST'])
+    # def resetPassword(self):
+    #     try:
+    #         with self.limiter.limit('1 per 5 seconds', key_func=lambda: session.sid):
+    #             try:
+    #                 try:
+    #                     data = resetPasswordRequest( **request.get_json() )
+    #                 except ValidationError as e:
+    #                     raise AppError("Invalid request body",
+    #                                 authResponses.resetPassword.ERROR_INVALID_REQUEST_BODY, 400)
                     
-                    token = request.args.get("token", default = None, type = str)
-                    if token is None:
-                        raise AppError('Expect "token" parameter on the URL query string.',
-                                    authResponses.resetPassword.ERROR_INVALID_QUERY_STRING, 400)
+    #                 token = request.args.get("token", default = None, type = str)
+    #                 if token is None:
+    #                     raise AppError('Expect "token" parameter on the URL query string.',
+    #                                 authResponses.resetPassword.ERROR_INVALID_QUERY_STRING, 400)
                     
-                    result: normalUser = self.authUsecase.resetPassword(data=data, token=token)
-                    return jsonify({
-                        "success": True,
-                        "message": "Password reset.",
-                        "messageCode": authResponses.resetPassword.SUCCESS,
-                        "data": result.model_dump(exclude_none=True),
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }), 201
+    #                 result: normalUser = self.authUsecase.resetPassword(data=data, token=token)
+    #                 return jsonify({
+    #                     "success": True,
+    #                     "message": "Password reset.",
+    #                     "messageCode": authResponses.resetPassword.SUCCESS,
+    #                     "data": result.model_dump(exclude_none=True),
+    #                     "timestamp": datetime.now(timezone.utc).isoformat()
+    #                 }), 201
                 
-                except RateLimitExceeded as e:
-                    raise AppError('Rate limit exceeded'
-                           , authResponses.resetPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
+    #             except RateLimitExceeded as e:
+    #                 raise AppError('Rate limit exceeded'
+    #                        , authResponses.resetPassword.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
-        except Exception as e:
-            with current_app.app_context():
-                return sendError(e)
+    #     except Exception as e:
+    #         with current_app.app_context():
+    #             return sendError(e)
         
     @route("/logout", methods=['POST'])
     def logout(self):
@@ -290,30 +290,30 @@ class authController(FlaskView):
             with current_app.app_context():
                 return sendError(e)
     
-    @route("/deleteAccount", methods=['DELETE'])
-    def deleteAccount(self):
-        try:
-            with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
-                try:
-                    try:
-                        data = deleteAccountRequest( **request.get_json() )
-                    except ValidationError as e:
-                        raise AppError('Invalid request body',
-                                    authResponses.deleteAccount.ERROR_INVALID_REQUEST_BODY, 400)
+    # @route("/deleteAccount", methods=['DELETE'])
+    # def deleteAccount(self):
+    #     try:
+    #         with self.limiter.limit('1 per 10 seconds', key_func=lambda: session.sid):
+    #             try:
+    #                 try:
+    #                     data = deleteAccountRequest( **request.get_json() )
+    #                 except ValidationError as e:
+    #                     raise AppError('Invalid request body',
+    #                                 authResponses.deleteAccount.ERROR_INVALID_REQUEST_BODY, 400)
                     
-                    self.authUsecase.deleteAccount(userID=data.userID)
-                    # redirect("/")
-                    return jsonify({
-                        "success": True,
-                        "message": "Account deleted.",
-                        "messageCode": authResponses.deleteAccount.SUCCESS,
-                        "timestamp": datetime.now(timezone.utc).isoformat()
-                    }), 200
+    #                 self.authUsecase.deleteAccount(userID=data.userID)
+    #                 # redirect("/")
+    #                 return jsonify({
+    #                     "success": True,
+    #                     "message": "Account deleted.",
+    #                     "messageCode": authResponses.deleteAccount.SUCCESS,
+    #                     "timestamp": datetime.now(timezone.utc).isoformat()
+    #                 }), 200
                 
-                except RateLimitExceeded as e:
-                    raise AppError('Rate limit exceeded'
-                           , authResponses.deleteAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
+    #             except RateLimitExceeded as e:
+    #                 raise AppError('Rate limit exceeded'
+    #                        , authResponses.deleteAccount.ERROR_RATE_LIMIT_EXCEEDED, 429)
 
-        except Exception as e:
-            with current_app.app_context():
-                return sendError(e)
+    #     except Exception as e:
+    #         with current_app.app_context():
+    #             return sendError(e)
